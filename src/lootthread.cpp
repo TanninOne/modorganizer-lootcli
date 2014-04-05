@@ -6,6 +6,7 @@
 #include <backend/streams.h>
 #include <backend/metadata.h>
 #include <backend/parsers.h>
+#include <backend/generators.h>
 #pragma warning (pop)
 #include <map>
 #include <list>
@@ -200,7 +201,7 @@ struct masterlist_updater_parser {
 };
 
 
-void LOOTWorker::sort(loot::Game &game)
+bool LOOTWorker::sort(loot::Game &game)
 {
   YAML::Node ulist;
   list<loot::Message> messages, mlist_messages, ulist_messages;
@@ -238,7 +239,7 @@ void LOOTWorker::sort(loot::Game &game)
   plugin_list_loader pll(graph, game);
   for (boost::unordered_map<string, size_t>::const_iterator it = tempMap.begin(), endit = tempMap.end(); it != endit; ++it) {
     BOOST_LOG_TRIVIAL(debug) << "Found plugin: " << it->first.c_str();
-    progress(it->first);
+    progress((boost::format("loading %1%") % it->first).str());
 
     vertex_t v = boost::add_vertex(loot::Plugin(it->first), graph);
 
@@ -248,6 +249,7 @@ void LOOTWorker::sort(loot::Game &game)
       group.create_thread(pl);
     }
   }
+  progress("waiting for masterlist update");
   group.create_thread(pll);
   group.join_all();
 
@@ -383,9 +385,13 @@ void LOOTWorker::sort(loot::Game &game)
     for (list<loot::Plugin>::iterator it = plugins.begin(), endIt = plugins.end(); it != endIt; ++it) {
       BOOST_LOG_TRIVIAL(debug) << '\t' << it->Name().c_str();
     }
+    progress("Generating Report");
+    GenerateReport(game.ReportPath(), messages, plugins, revision, m_UpdateMasterlist);
+    return true;
   } catch (std::exception& e) {
     BOOST_LOG_TRIVIAL(error) << "Failed to calculate the load order. Details: " << e.what();
     messages.push_back(loot::Message(loot::Message::error, (boost::format("Failed to calculate the load order. Details: %1%") % e.what()).str()));
+    return false;
   }
 }
 
@@ -393,14 +399,15 @@ void LOOTWorker::sort(loot::Game &game)
 // end of copied code
 //
 
-
 void LOOTWorker::run()
 {
   try {
     loot::Game game(m_GameId);
     game.SetPath(m_GamePath);
-    sort(game);
-    BOOST_LOG_TRIVIAL(info) << "[report] " << game.ReportPath().string();
+
+    if (sort(game)) {
+      BOOST_LOG_TRIVIAL(info) << "[report] " << game.ReportPath().string();
+    }
   } catch (const std::exception &e) {
     errorOccured((boost::format("LOOT failed: %1%") % e.what()).str());
   }

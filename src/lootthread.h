@@ -31,7 +31,7 @@ private:
 private:
 
   void handleErr(unsigned int resultCode, const char *description);
-  void sort(loot::Game &game);
+  bool sort(loot::Game &game);
 
 private:
 

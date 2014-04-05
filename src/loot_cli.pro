@@ -13,6 +13,8 @@ CONFIG(debug, debug|release) {
 } else {
   OUTDIR = $$OUT_PWD/release
   DSTDIR = $$PWD/../../output
+  QMAKE_CXXFLAGS += /Zi /GL
+  QMAKE_LFLAGS += /LTCG /OPT:REF /OPT:ICF
 }
 
 OUTDIR ~= s,/,$$QMAKE_DIR_SEP,g
@@ -41,6 +43,6 @@ LIBS += \
     -lloot32 -llibyaml-cppmd -lgit2 -lzlibstatic -lloadorder32 \
     -lversion -ladvapi32 -lshell32
 
-QMAKE_POST_LINK += xcopy /y /I $$quote($$OUTDIR\\lootcli*.exe) $$quote($$DSTDIR) $$escape_expand(\\n)
+QMAKE_POST_LINK += xcopy /y /I $$quote($$OUTDIR\\loot\\lootcli*.exe) $$quote($$DSTDIR) $$escape_expand(\\n)
 
 DEFINES += LOOT_STATIC
