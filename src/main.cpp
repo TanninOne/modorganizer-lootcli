@@ -8,6 +8,7 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/utility/setup/file.hpp>
+#include <boost/log/utility/setup/console.hpp>
 #include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
 #include "lootthread.h"
 
@@ -29,6 +30,7 @@ T getParameter(const std::vector<std::string> &arguments, const std::string &key
 
 int main(int argc, char *argv[])
 {
+  boost::log::add_console_log(std::cout, boost::log::keywords::format = "%Message%");
   logging::core::get()->set_filter(
     logging::trivial::severity >= logging::trivial::info
   );

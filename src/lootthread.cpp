@@ -218,7 +218,7 @@ bool LOOTWorker::sort(loot::Game &game)
   ///////////////////////////////////////////////////////
 
   masterlist_updater_parser mup(m_UpdateMasterlist, game, messages, mlist_plugins, mlist_messages, revision);
-  group.create_thread(mup);
+  boost::thread *mupThread = group.create_thread(mup);
 
   //First calculate the mean plugin size. Store it temporarily in a map to reduce filesystem lookups and file size recalculation.
   size_t meanFileSize = 0;
@@ -251,6 +251,10 @@ bool LOOTWorker::sort(loot::Game &game)
   }
   progress("waiting for masterlist update");
   group.create_thread(pll);
+  int activitiy = 0;
+  while (!mupThread->try_join_for(boost::chrono::milliseconds(100))) {
+    progress((boost::format("waiting for masterlist update %1%") % "|/-\\"[activitiy++ % 4]).str());
+  }
   group.join_all();
 
   progress("load userlist");
