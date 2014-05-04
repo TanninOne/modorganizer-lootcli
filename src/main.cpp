@@ -28,6 +28,7 @@ T getParameter(const std::vector<std::string> &arguments, const std::string &key
   }
 }
 
+
 int main(int argc, char *argv[])
 {
   boost::log::add_console_log(std::cout, boost::log::keywords::format = "%Message%");
@@ -42,12 +43,13 @@ int main(int argc, char *argv[])
   std::vector<std::string> arguments;
   std::copy(argv + 1, argv + argc, std::back_inserter(arguments));
 
+  // design rationale: this was designed to have the actual loot stuff run in a separate thread. That turned
+  // out to be unnecessary atm.
   LOOTWorker worker;
 
   try {
     worker.setGame(getParameter<std::string>(arguments, "game"));
     worker.setGamePath(getParameter<std::string>(arguments, "gamePath"));
-
     return worker.run();
   } catch (const std::exception &e) {
     BOOST_LOG_TRIVIAL(error) << "Error: " << e.what();

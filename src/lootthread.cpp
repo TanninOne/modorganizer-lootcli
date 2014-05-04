@@ -7,6 +7,7 @@
 #include <backend/metadata.h>
 #include <backend/parsers.h>
 #include <backend/generators.h>
+#include <backend/globals.h>
 #pragma warning (pop)
 #include <map>
 #include <list>
@@ -406,6 +407,9 @@ bool LOOTWorker::sort(loot::Game &game)
 void LOOTWorker::run()
 {
   try {
+    // ensure the loot directory exists
+    boost::filesystem::create_directory(g_path_local);
+
     loot::Game game(m_GameId);
     game.SetPath(m_GamePath);
 
