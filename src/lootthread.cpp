@@ -118,8 +118,10 @@ struct plugin_list_loader {
     void operator () () {
         loot::vertex_it vit, vitend;
         for (boost::tie(vit, vitend) = boost::vertices(_graph); vit != vitend; ++vit) {
-            if (skipPlugins.find(_graph[*vit].Name()) == skipPlugins.end()) {
-                _graph[*vit] = loot::Plugin(_game, _graph[*vit].Name(), false);
+            std::string name = _graph[*vit].Name();
+            if (skipPlugins.find(name) == skipPlugins.end()) {
+              // TODO this seems to crash if loot doesn't like the plugin.
+              _graph[*vit] = loot::Plugin(_game, name, false);
             }
         }
     }
@@ -213,7 +215,6 @@ bool LOOTWorker::sort(loot::Game &game)
   string revision;
 
   progress("preparing sort");
-
   ///////////////////////////////////////////////////////
   // Load Plugins & Lists
   ///////////////////////////////////////////////////////

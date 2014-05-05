@@ -14,7 +14,7 @@ CONFIG(debug, debug|release) {
   OUTDIR = $$OUT_PWD/release
   DSTDIR = $$PWD/../../output
   QMAKE_CXXFLAGS += /Zi /GL
-  QMAKE_LFLAGS += /LTCG /OPT:REF /OPT:ICF
+  QMAKE_LFLAGS += /DEBUG /LTCG /OPT:REF /OPT:ICF
 }
 
 OUTDIR ~= s,/,$$QMAKE_DIR_SEP,g
