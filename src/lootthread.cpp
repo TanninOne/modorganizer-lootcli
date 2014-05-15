@@ -413,6 +413,7 @@ void LOOTWorker::run()
 
     loot::Game game(m_GameId);
     game.SetPath(m_GamePath);
+    game.RefreshActivePluginsList();
 
     if (sort(game)) {
       BOOST_LOG_TRIVIAL(info) << "[report] " << game.ReportPath().string();
