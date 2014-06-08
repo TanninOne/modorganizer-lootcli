@@ -28,6 +28,17 @@ T getParameter(const std::vector<std::string> &arguments, const std::string &key
   }
 }
 
+template <>
+bool getParameter<bool>(const std::vector<std::string> &arguments, const std::string &key)
+{
+  auto iter = std::find(arguments.begin(), arguments.end(), std::string("--") + key);
+  if (iter != arguments.end()) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -47,6 +58,7 @@ int main(int argc, char *argv[])
   LOOTWorker worker;
 
   try {
+    worker.setUpdateMasterlist(getParameter<bool>(arguments, "updateMasterlist"));
     worker.setGame(getParameter<std::string>(arguments, "game"));
     worker.setGamePath(getParameter<std::string>(arguments, "gamePath"));
     return worker.run();

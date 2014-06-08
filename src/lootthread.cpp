@@ -253,9 +253,8 @@ bool LOOTWorker::sort(loot::Game &game)
   }
   progress("waiting for masterlist update");
   group.create_thread(pll);
-  int activitiy = 0;
   while (!mupThread->try_join_for(boost::chrono::milliseconds(100))) {
-    progress((boost::format("waiting for masterlist update %1%") % "|/-\\"[activitiy++ % 4]).str());
+    progress("waiting for masterlist update");
   }
   group.join_all();
 
