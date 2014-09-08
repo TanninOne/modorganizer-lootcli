@@ -1,8 +1,8 @@
 #include "lootthread.h"
+#include "../uibase/scopeguard.h"
 #pragma warning (push, 0)
 #include <api/api.h>
 #include <backend/graph.h>
-#include <backend/network.h>
 #include <backend/streams.h>
 #include <backend/metadata.h>
 #include <backend/parsers.h>
@@ -23,6 +23,9 @@ using namespace loot;
 namespace fs = boost::filesystem;
 
 
+struct _loot_db_int : public loot::Game {};
+
+
 LOOTWorker::LOOTWorker()
   : m_GameId(loot_game_tes5)
   , m_Language(loot_lang_any)
@@ -36,6 +39,25 @@ std::string ToLower(const std::string &text)
   std::string result = text;
   std::transform(text.begin(), text.end(), result.begin(), tolower);
   return result;
+}
+
+
+const char *lootErrorString(unsigned int errorCode)
+{
+  // can't use switch-case here because the loot_error constants are externs
+  if (errorCode == loot_error_liblo_error)         return "There was an error in performing a load order operation.";
+  if (errorCode == loot_error_file_write_fail)     return "A file could not be written to.";
+  if (errorCode == loot_error_parse_fail)          return "There was an error parsing the file.";
+  if (errorCode == loot_error_condition_eval_fail) return "There was an error evaluating the conditionals in a metadata file.";
+  if (errorCode == loot_error_regex_eval_fail)     return "There was an error evaluating the regular expressions in a metadata file.";
+  if (errorCode == loot_error_no_mem)              return "The API was unable to allocate the required memory.";
+  if (errorCode == loot_error_invalid_args)        return "Invalid arguments were given for the function.";
+  if (errorCode == loot_error_no_tag_map)          return "No Bash Tag map has been generated yet.";
+  if (errorCode == loot_error_path_not_found)      return "A file or folder path could not be found.";
+  if (errorCode == loot_error_no_game_detected)    return "The given game could not be found.";
+  if (errorCode == loot_error_windows_error)       return "An error occurred during a call to the Windows API.";
+  if (errorCode == loot_error_sorting_error)       return "An error occurred while sorting plugins.";
+  return "Unknown error code";
 }
 
 
@@ -97,7 +119,7 @@ void LOOTWorker::handleErr(unsigned int resultCode, const char *description)
 // copyright by WrinklyNinja
 //
 
-
+/*
 struct plugin_loader {
     plugin_loader(loot::Plugin& plugin, loot::Game& game) : _plugin(plugin), _game(game) {
     }
@@ -399,7 +421,7 @@ bool LOOTWorker::sort(loot::Game &game)
     return false;
   }
 }
-
+*/
 //
 // end of copied code
 //
@@ -410,13 +432,54 @@ void LOOTWorker::run()
     // ensure the loot directory exists
     boost::filesystem::create_directory(g_path_local);
 
+/*
     loot::Game game(m_GameId);
     game.SetPath(m_GamePath);
-    game.RefreshActivePluginsList();
+    game.RefreshActivePluginsList();*/
 
-    if (sort(game)) {
-      BOOST_LOG_TRIVIAL(info) << "[report] " << game.ReportPath().string();
+    loot_db db;
+    loot_create_db(&db, m_GameId, m_GamePath.c_str());
+    ON_BLOCK_EXIT([&] () {
+      loot_destroy_db(db);
+      loot_cleanup();
+    });
+
+    bool mlUpdated = false;
+    if (m_UpdateMasterlist) {
+      char *masterlistPath = nullptr;
+      char *repoURL = nullptr;
+      char *repoBranch = nullptr;
+      ON_BLOCK_EXIT([&] () {
+        loot_free_string(masterlistPath);
+        loot_free_string(repoURL);
+        loot_free_string(repoBranch);
+      });
+      if ((loot_get_masterlist_path(db, &masterlistPath) == loot_ok)
+          && (loot_get_repository_url(db, &repoURL) == loot_ok)
+          && (loot_get_repository_branch(db, &repoBranch) == loot_ok)) {
+        unsigned int res = loot_update_masterlist(db
+                                                  , masterlistPath
+                                                  , repoURL
+                                                  , repoBranch
+                                                  , &mlUpdated);
+        if (res != loot_ok) {
+          progress((boost::format("failed to update masterlist: %1%") % lootErrorString(res)).str());
+        }
+      } else {
+        const char *errorMessage = nullptr;
+        loot_get_error_message(&errorMessage);
+        errorOccured((boost::format("failed to query paths: %1%") % errorMessage).str());
+      }
     }
+
+    char **sortedPlugins;
+    size_t numPlugins;
+
+    loot_sort_plugins(db, &sortedPlugins, &numPlugins);
+
+/*    if (sort(game)) {
+      BOOST_LOG_TRIVIAL(info) << "[report] " << game.ReportPath().string();
+    }*/
   } catch (const std::exception &e) {
     errorOccured((boost::format("LOOT failed: %1%") % e.what()).str());
   }

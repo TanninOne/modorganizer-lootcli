@@ -1,6 +1,10 @@
 TARGET = lootcli
 CONFIG   -= qt
 
+!include(../LocalPaths.pri) {
+  message("paths to required libraries need to be set up in LocalPaths.pri")
+}
+
 SOURCES += main.cpp \
     lootthread.cpp
 
@@ -26,23 +30,31 @@ QMAKE_CXXFLAGS += -Zc:wchar_t
 QMAKE_LFLAGS += /ENTRY:"mainCRTStartup"
 
 INCLUDEPATH += \
-    "$(BOOSTPATH)" \
-    "$(LOOTPATH)/src" \
-    "$(LOOTPATH)/../libloadorder/src" \
-    "$(LOOTPATH)/../libespm" \
-    "$(LOOTPATH)/../zlib" \
-    "$(LOOTPATH)/../yaml-cpp/include"
+    "$${BOOSTPATH}" \
+    "$${LOOTPATH}/src" \
+    "$${LOOTPATH}/../libloadorder/src" \
+    "$${LOOTPATH}/../libespm" \
+    "$${LOOTPATH}/../zlib" \
+    "$${LOOTPATH}/../yaml-cpp/include"
+
+release:LIBS += \
+    -L"$${LOOTPATH}/build/Release" \
+    -L"$${LOOTPATH}/../libloadorder/build/Release" \
+    -L"$${LOOTPATH}/../yaml-cpp/build/Release" \
+    -L"$${LOOTPATH}/../libgit2/build/Release" \
+
+debug:LIBS += \
+    -L"$${LOOTPATH}/build/Debug" \
+    -L"$${LOOTPATH}/../libloadorder/build/Debug" \
+    -L"$${LOOTPATH}/../yaml-cpp/build/Debug" \
+    -L"$${LOOTPATH}/../libgit2/build/Debug" \
 
 LIBS += \
-    -L"$(LOOTPATH)/build/Release" \
-    -L"$(LOOTPATH)/../libloadorder/build/Release" \
-    -L"$(LOOTPATH)/../zlib/build" \
-    -L"$(LOOTPATH)/../yaml-cpp/build/Release" \
-    -L"$(LOOTPATH)/../libgit2/build/Release" \
-    -L"$(BOOSTPATH)/stage/lib" \
-    -lloot32 -llibyaml-cppmd -lgit2 -lzlibstatic -lloadorder32 \
+    -L"$${ZLIBPATH}" -L"$${ZLIBPATH}/build" \
+    -L"$${BOOSTPATH}/stage/lib" \
+    -lloot32 \# -llibyaml-cppmtd -lgit2 -lzlibstatic -lloadorder32 \
     -lversion -ladvapi32 -lshell32
 
 QMAKE_POST_LINK += xcopy /y /I $$quote($$OUTDIR\\lootcli*.exe) $$quote($$DSTDIR\\loot) $$escape_expand(\\n)
 
-DEFINES += LOOT_STATIC
+#DEFINES += LOOT_STATIC
