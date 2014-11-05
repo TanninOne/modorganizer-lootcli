@@ -1,5 +1,5 @@
 TARGET = lootcli
-CONFIG   -= qt
+#CONFIG   -= qt
 
 !include(../LocalPaths.pri) {
   message("paths to required libraries need to be set up in LocalPaths.pri")
@@ -31,29 +31,37 @@ QMAKE_LFLAGS += /ENTRY:"mainCRTStartup"
 
 INCLUDEPATH += \
     "$${BOOSTPATH}" \
-    "$${LOOTPATH}/src" \
-    "$${LOOTPATH}/../libloadorder/src" \
-    "$${LOOTPATH}/../libespm" \
-    "$${LOOTPATH}/../zlib" \
-    "$${LOOTPATH}/../yaml-cpp/include"
+    "$${LOOTPATH}/include"
+#    "$${LOOTPATH}/src" \
+#    "$${LOOTPATH}/../../libloadorder/src" \
+#    "$${LOOTPATH}/../../libespm" \
+#    "$${LOOTPATH}/../../zlib" \
+#    "$${LOOTPATH}/../../yaml-cpp/include"
 
-release:LIBS += \
-    -L"$${LOOTPATH}/build/Release" \
-    -L"$${LOOTPATH}/../libloadorder/build/Release" \
-    -L"$${LOOTPATH}/../yaml-cpp/build/Release" \
-    -L"$${LOOTPATH}/../libgit2/build/Release" \
+#release:LIBS += \
+#    -L"$${LOOTPATH}/build/Release" \
+#    -L"$${LOOTPATH}/../../libloadorder/build/Release" \
+#    -L"$${LOOTPATH}/../../yaml-cpp/build/Release" \
+#    -L"$${LOOTPATH}/../../libgit2/build/Release" \
 
-debug:LIBS += \
-    -L"$${LOOTPATH}/build/Debug" \
-    -L"$${LOOTPATH}/../libloadorder/build/Debug" \
-    -L"$${LOOTPATH}/../yaml-cpp/build/Debug" \
-    -L"$${LOOTPATH}/../libgit2/build/Debug" \
+#debug:LIBS += \
+#    -L"$${LOOTPATH}/build/Debug" \
+#    -L"$${LOOTPATH}/../../libloadorder/build/Debug" \
+#    -L"$${LOOTPATH}/../../yaml-cpp/build/Debug" \
+#    -L"$${LOOTPATH}/../../libgit2/build/Debug" \
 
 LIBS += \
-    -L"$${ZLIBPATH}" -L"$${ZLIBPATH}/build" \
+    -L"$${ZLIBPATH}" \
+    -L"$${ZLIBPATH}/build" \
     -L"$${BOOSTPATH}/stage/lib" \
-    -lloot32 \# -llibyaml-cppmtd -lgit2 -lzlibstatic -lloadorder32 \
+    -L"$${LOOTPATH}" \
+#    -lloot32 \
     -lversion -ladvapi32 -lshell32
+
+## -llibyaml-cppmtd -lgit2 -lzlibstatic -lloadorder32 \
+
+#QMAKE_PRE_LINK += $${LOOTPATH}/expdef -p -o $${LOOTPATH}/loot32.dll > $${LOOTPATH}/loot32.def $$escape_expand(\\n)
+#QMAKE_PRE_LINK += lib /def:$${LOOTPATH}/loot32.def /out:$${LOOTPATH}/loot32.lib /machine:x86 $$escape_expand(\\n)
 
 QMAKE_POST_LINK += xcopy /y /I $$quote($$OUTDIR\\lootcli*.exe) $$quote($$DSTDIR\\loot) $$escape_expand(\\n)
 
