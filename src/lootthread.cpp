@@ -239,7 +239,7 @@ void LOOTWorker::run()
     }
 
     char **sortedPlugins;
-    size_t numPlugins;
+    size_t numPlugins = 0;
 
     progress("sorting plugins");
     res = LFUNC(loot_sort_plugins)(db, &sortedPlugins, &numPlugins);
@@ -259,30 +259,32 @@ void LOOTWorker::run()
     for (size_t i = 0; i < numPlugins; ++i) {
       QJsonObject modInfo;
       modInfo.insert("name", sortedPlugins[i]);
-      loot_message *pluginMessages;
-      size_t numMessages;
+      loot_message *pluginMessages = nullptr;
+      size_t numMessages = 0;
       res = LFUNC(loot_get_plugin_messages)(db, sortedPlugins[i], &pluginMessages, &numMessages);
       if (res != LVAR(loot_ok)) {
         progress((boost::format("failed to retrieve plugin messages: %1%") % lootErrorString(res)).str());
       }
       QJsonArray messages;
-      for (size_t j = 0; j < numMessages; ++j) {
-        QJsonObject message;
-        QString type;
-        if (pluginMessages[j].type == LVAR(loot_message_say))
-          type = "info";
-        else if (pluginMessages[j].type == LVAR(loot_message_warn))
-          type = "warn";
-        else if (pluginMessages[j].type == LVAR(loot_message_error))
-          type = "error";
-        else {
-          errorOccured((boost::format("invalid message type %1%") % pluginMessages[j].type).str());
-          type = "unknown";
-        }
+      if (pluginMessages != nullptr) {
+        for (size_t j = 0; j < numMessages; ++j) {
+          QJsonObject message;
+          QString type;
+          if (pluginMessages[j].type == LVAR(loot_message_say))
+            type = "info";
+          else if (pluginMessages[j].type == LVAR(loot_message_warn))
+            type = "warn";
+          else if (pluginMessages[j].type == LVAR(loot_message_error))
+            type = "error";
+          else {
+            errorOccured((boost::format("invalid message type %1%") % pluginMessages[j].type).str());
+            type = "unknown";
+          }
 
-        message.insert("type", type);
-        message.insert("message", QJsonValue(pluginMessages[j].message));
-        messages.append(message);
+          message.insert("type", type);
+          message.insert("message", QJsonValue(pluginMessages[j].message));
+          messages.append(message);
+        }
       }
 
       modInfo.insert("messages", messages);
