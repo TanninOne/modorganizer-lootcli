@@ -1,0 +1,43 @@
+import os
+
+Import('qt_env')
+
+env = qt_env.Clone()
+
+env.EnableQtModules('Core')
+
+env.AppendUnique(CPPPATH = [
+    "${BOOSTPATH}",
+    "${LOOTPATH}/include"
+])
+
+env.AppendUnique(CPPDEFINES = [
+    '_CRT_SECURE_NO_WARNINGS'
+])
+
+env.AppendUnique(LIBS = [
+    'shell32'
+])
+
+env.AppendUnique(LINKFLAGS = [
+    '/ENTRY:"mainCRTStartup"',
+    '/SUBSYSTEM:WINDOWS',
+    '${EXE_MANIFEST_DEPENDENCY}'
+])
+
+prog = env.Program('lootcli', env.Glob('*.cpp'))
+
+env.InstallModule(prog, subdir = 'loot')
+
+res = env['QT_USED_MODULES']
+Return('res')
+
+"""
+
+CONFIG(debug, debug|release) {
+} else {
+  QMAKE_CXXFLAGS += /Zi /GL
+  QMAKE_LFLAGS += /DEBUG /LTCG /OPT:REF /OPT:ICF
+}
+
+"""
