@@ -66,3 +66,6 @@ LIBS += \
 QMAKE_POST_LINK += xcopy /y /I $$quote($$OUTDIR\\lootcli*.exe) $$quote($$DSTDIR\\loot) $$escape_expand(\\n)
 
 #DEFINES += LOOT_STATIC
+
+OTHER_FILES += \
+    SConscript
