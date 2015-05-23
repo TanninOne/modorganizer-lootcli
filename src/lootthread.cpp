@@ -176,6 +176,11 @@ boost::filesystem::path LOOTWorker::masterlistPath()
   return GetLOOTAppData() / m_GameName / "masterlist.yaml";
 }
 
+boost::filesystem::path LOOTWorker::userlistPath()
+{
+  return GetLOOTAppData() / m_GameName / "userlist.yaml";
+}
+
 const char *LOOTWorker::repoUrl()
 {
   if (m_GameId == LVAR(loot_game_tes4))
@@ -228,7 +233,9 @@ void LOOTWorker::run()
       }
     }
 
-    res = LFUNC(loot_load_lists)(db, masterlistPath().string().c_str(), nullptr);
+    res = LFUNC(loot_load_lists)(db
+                                 , masterlistPath().string().c_str()
+                                 , userlistPath().string().c_str());
     if (res != LVAR(loot_ok)) {
       progress((boost::format("failed to load lists: %1%") % lootErrorString(res)).str());
     }

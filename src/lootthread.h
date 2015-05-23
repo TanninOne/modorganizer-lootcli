@@ -31,6 +31,7 @@ private:
   void errorOccured(const std::string &message);
 
   boost::filesystem::path masterlistPath();
+  boost::filesystem::path userlistPath();
   const char *repoUrl();
 
 private:
