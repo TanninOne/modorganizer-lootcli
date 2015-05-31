@@ -17,8 +17,6 @@ public:
 
   void setGame(const std::string &gameName);
   void setGamePath(const std::string &gamePath);
-  void setMasterlist(const std::string &masterlistPath);
-  void setUserlist(const std::string &userlistPath);
   void setOutput(const std::string &outputPath);
 
   void setUpdateMasterlist(bool update);
@@ -48,8 +46,6 @@ private:
   int m_Language;
   std::string m_GameName;
   std::string m_GamePath;
-  std::string m_MasterlistPath;
-  std::string m_UserlistPath;
   std::string m_OutputPath;
   bool m_UpdateMasterlist;
   QLibrary m_Library;

@@ -126,16 +126,6 @@ void LOOTWorker::setGamePath(const std::string &gamePath)
   m_GamePath = gamePath;
 }
 
-void LOOTWorker::setMasterlist(const std::string &masterlistPath)
-{
-  m_MasterlistPath = masterlistPath;
-}
-
-void LOOTWorker::setUserlist(const std::string &userlistPath)
-{
-  m_UserlistPath = userlistPath;
-}
-
 void LOOTWorker::setOutput(const std::string &outputPath)
 {
   m_OutputPath = outputPath;
@@ -233,9 +223,13 @@ void LOOTWorker::run()
       }
     }
 
+    boost::filesystem::path userlist = userlistPath();
+
+
     res = LFUNC(loot_load_lists)(db
                                  , masterlistPath().string().c_str()
-                                 , userlistPath().string().c_str());
+                                 , boost::filesystem::exists(userlist) ? userlistPath().string().c_str()
+                                                                       : nullptr);
     if (res != LVAR(loot_ok)) {
       progress((boost::format("failed to load lists: %1%") % lootErrorString(res)).str());
     }
