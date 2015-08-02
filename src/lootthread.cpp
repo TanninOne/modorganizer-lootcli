@@ -9,6 +9,7 @@
 #include <boost/thread.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
+#include <boost/filesystem.hpp>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <Shlobj.h>
@@ -213,6 +214,7 @@ void LOOTWorker::run()
     bool mlUpdated = false;
     if (m_UpdateMasterlist) {
       progress("updating masterlist");
+      boost::filesystem::create_directories(masterlistPath());
       unsigned int res = LFUNC(loot_update_masterlist)(db
                                                       , masterlistPath().string().c_str()
                                                       , repoUrl()

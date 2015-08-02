@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
   LOOTWorker worker;
 
   try {
-    worker.setUpdateMasterlist(getParameter<bool>(arguments, "updateMasterlist"));
+    worker.setUpdateMasterlist(!getParameter<bool>(arguments, "skipUpdateMasterlist"));
     worker.setGame(getParameter<std::string>(arguments, "game"));
     worker.setGamePath(getParameter<std::string>(arguments, "gamePath"));
     worker.setOutput(getParameter<std::string>(arguments, "out"));
