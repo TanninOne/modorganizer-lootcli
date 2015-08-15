@@ -191,12 +191,14 @@ void LOOTWorker::run()
 {
   try {
     // ensure the loot directory exists
-    boost::filesystem::path lootAppData = GetLOOTAppData();
+    fs::path lootAppData = GetLOOTAppData();
     if (lootAppData.empty()) {
       errorOccured("failed to create loot app data path");
       return;
     }
-    boost::filesystem::create_directory(lootAppData);
+    if (!fs::exists(lootAppData)) {
+      fs::create_directory(lootAppData);
+    }
 
     loot_db db;
 
@@ -214,7 +216,9 @@ void LOOTWorker::run()
     bool mlUpdated = false;
     if (m_UpdateMasterlist) {
       progress("updating masterlist");
-      boost::filesystem::create_directories(masterlistPath());
+      if (!fs::exists(masterlistPath())) {
+        fs::create_directories(masterlistPath());
+      }
       unsigned int res = LFUNC(loot_update_masterlist)(db
                                                       , masterlistPath().string().c_str()
                                                       , repoUrl()
@@ -225,13 +229,13 @@ void LOOTWorker::run()
       }
     }
 
-    boost::filesystem::path userlist = userlistPath();
+    fs::path userlist = userlistPath();
 
 
     res = LFUNC(loot_load_lists)(db
                                  , masterlistPath().string().c_str()
-                                 , boost::filesystem::exists(userlist) ? userlistPath().string().c_str()
-                                                                       : nullptr);
+                                 , fs::exists(userlist) ? userlistPath().string().c_str()
+                                                        : nullptr);
     if (res != LVAR(loot_ok)) {
       progress((boost::format("failed to load lists: %1%") % lootErrorString(res)).str());
     }
