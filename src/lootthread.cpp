@@ -1,5 +1,4 @@
 #include "lootthread.h"
-#include "../uibase/scopeguard.h"
 #pragma warning (push, 0)
 #include <loot/api.h>
 #pragma warning (pop)
@@ -189,6 +188,8 @@ const char *LOOTWorker::repoUrl()
 
 void LOOTWorker::run()
 {
+  loot_db db;
+
   try {
     // ensure the loot directory exists
     fs::path lootAppData = GetLOOTAppData();
@@ -200,18 +201,11 @@ void LOOTWorker::run()
       fs::create_directory(lootAppData);
     }
 
-    loot_db db;
-
     unsigned int res = LFUNC(loot_create_db)(&db, m_GameId, m_GamePath.c_str(), nullptr);
     if (res != LVAR(loot_ok)) {
       errorOccured((boost::format("failed to create db: %1%") % lootErrorString(res)).str());
       return;
     }
-
-    ON_BLOCK_EXIT([&] () {
-      LFUNC(loot_destroy_db)(db);
-      LFUNC(loot_cleanup)();
-    });
 
     bool mlUpdated = false;
     if (m_UpdateMasterlist) {
@@ -318,6 +312,9 @@ void LOOTWorker::run()
     errorOccured((boost::format("LOOT failed: %1%") % e.what()).str());
   }
   progress("done");
+
+  LFUNC(loot_destroy_db)(db);
+  LFUNC(loot_cleanup)();
 }
 
 void LOOTWorker::progress(const string &step)
