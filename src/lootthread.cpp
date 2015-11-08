@@ -18,8 +18,8 @@
 #include <QJsonObject>
 #include <QFile>
 #include <QLibrary>
+#include <ctype.h>
 
-using namespace std;
 using namespace loot;
 namespace fs = boost::filesystem;
 
@@ -317,13 +317,13 @@ void LOOTWorker::run()
   LFUNC(loot_cleanup)();
 }
 
-void LOOTWorker::progress(const string &step)
+void LOOTWorker::progress(const std::string &step)
 {
   BOOST_LOG_TRIVIAL(info) << "[progress] " << step;
   fflush(stdout);
 }
 
-void LOOTWorker::errorOccured(const string &message)
+void LOOTWorker::errorOccured(const std::string &message)
 {
   BOOST_LOG_TRIVIAL(error) << message;
   fflush(stdout);
