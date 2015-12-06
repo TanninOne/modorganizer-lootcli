@@ -62,7 +62,8 @@ int main(int argc, char *argv[])
     worker.setGame(getParameter<std::string>(arguments, "game"));
     worker.setGamePath(getParameter<std::string>(arguments, "gamePath"));
     worker.setOutput(getParameter<std::string>(arguments, "out"));
-    return worker.run();
+    worker.run();
+    return 0;
   } catch (const std::exception &e) {
     BOOST_LOG_TRIVIAL(error) << "Error: " << e.what();
     return 1;
