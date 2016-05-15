@@ -55,9 +55,9 @@ int main(int argc, char *argv[])
 
   // design rationale: this was designed to have the actual loot stuff run in a separate thread. That turned
   // out to be unnecessary atm.
-  LOOTWorker worker;
 
   try {
+    LOOTWorker worker;
     worker.setUpdateMasterlist(!getParameter<bool>(arguments, "skipUpdateMasterlist"));
     worker.setGame(getParameter<std::string>(arguments, "game"));
     worker.setGamePath(getParameter<std::string>(arguments, "gamePath"));

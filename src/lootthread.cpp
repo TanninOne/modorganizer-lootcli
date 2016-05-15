@@ -9,28 +9,30 @@
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <Shlobj.h>
-#include <QJsonObject>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QFile>
-#include <QLibrary>
 #include <ctype.h>
+
 
 using namespace loot;
 namespace fs = boost::filesystem;
 
+using boost::property_tree::ptree;
+using boost::property_tree::write_json;
 
 
 LOOTWorker::LOOTWorker()
   : m_GameId(0)
   , m_Language(0)
   , m_GameName("Skyrim")
-  , m_Library("loot32.dll")
 {
+  m_Library = LoadLibraryW(L"loot32.dll");
+  if (m_Library == nullptr) {
+    throw std::runtime_error("failed to load loot32.dll");
+  }
 }
 
 
@@ -66,9 +68,9 @@ const char *LOOTWorker::lootErrorString(unsigned int errorCode)
 
 
 
-template <typename T> T LOOTWorker::resolveVariable(QLibrary &lib, const char *name)
+template <typename T> T LOOTWorker::resolveVariable(HMODULE lib, const char *name)
 {
-  auto iter = m_ResolveLookup.find(name);
+/*  auto iter = m_ResolveLookup.find(name);
   QFunctionPointer ptr;
   if (iter == m_ResolveLookup.end()) {
     ptr = lib.resolve(name);
@@ -79,28 +81,45 @@ template <typename T> T LOOTWorker::resolveVariable(QLibrary &lib, const char *n
 
   if (ptr == NULL) {
     throw std::runtime_error(QObject::tr("invalid dll: %1").arg(lib.errorString()).toLatin1().constData());
+  }
+
+  return *reinterpret_cast<T*>(ptr);*/
+
+  auto iter = m_ResolveLookup.find(name);
+
+  FARPROC ptr;
+  if (iter == m_ResolveLookup.end()) {
+    ptr = GetProcAddress(lib, name);
+    m_ResolveLookup.insert(std::make_pair(std::string(name), ptr));
+  } else {
+    ptr = iter->second;
+  }
+
+  if (ptr == NULL) {
+    throw std::runtime_error((boost::format("invalid dll, variable %1% not found") % name).str());
   }
 
   return *reinterpret_cast<T*>(ptr);
 }
 
 
-template <typename T> T LOOTWorker::resolveFunction(QLibrary &lib, const char *name)
+template <typename T> T LOOTWorker::resolveFunction(HMODULE lib, const char *name)
 {
   auto iter = m_ResolveLookup.find(name);
-  QFunctionPointer ptr;
+
+  FARPROC ptr;
   if (iter == m_ResolveLookup.end()) {
-    ptr = lib.resolve(name);
+    ptr = GetProcAddress(lib, name);
     m_ResolveLookup.insert(std::make_pair(std::string(name), ptr));
   } else {
     ptr = iter->second;
   }
 
   if (ptr == NULL) {
-    throw std::runtime_error(QObject::tr("invalid dll: %1").arg(lib.errorString()).toLatin1().constData());
+    throw std::runtime_error((boost::format("invalid dll, function %1% not found") % name).str());
   }
 
-  return reinterpret_cast<T>(ptr);
+  return *reinterpret_cast<T*>(ptr);
 }
 
 
@@ -109,6 +128,7 @@ void LOOTWorker::setGame(const std::string &gameName)
   static std::map<std::string, unsigned int> gameMap = boost::assign::map_list_of
     ( "oblivion", LVAR(loot_game_tes4) )
     ( "fallout3", LVAR(loot_game_fo3) )
+    ( "fallout4", LVAR(loot_game_fo4) )
     ( "falloutnv", LVAR(loot_game_fonv) )
     ( "skyrim", LVAR(loot_game_tes5) );
 
@@ -254,23 +274,21 @@ void LOOTWorker::run()
       progress((boost::format("failed to apply load order: %1%") % lootErrorString(res)).str());
     }
 
-    QJsonArray report;
+    ptree report;
 
     progress("retrieving loot messages");
     for (size_t i = 0; i < numPlugins; ++i) {
-      QJsonObject modInfo;
-      modInfo.insert("name", sortedPlugins[i]);
+      report.add("name", sortedPlugins[i]);
+
       loot_message *pluginMessages = nullptr;
       size_t numMessages = 0;
       res = LFUNC(loot_get_plugin_messages)(db, sortedPlugins[i], &pluginMessages, &numMessages);
       if (res != LVAR(loot_ok)) {
         progress((boost::format("failed to retrieve plugin messages: %1%") % lootErrorString(res)).str());
       }
-      QJsonArray messages;
       if (pluginMessages != nullptr) {
         for (size_t j = 0; j < numMessages; ++j) {
-          QJsonObject message;
-          QString type;
+          const char *type;
           if (pluginMessages[j].type == LVAR(loot_message_say))
             type = "info";
           else if (pluginMessages[j].type == LVAR(loot_message_warn))
@@ -282,32 +300,26 @@ void LOOTWorker::run()
             type = "unknown";
           }
 
-          message.insert("type", type);
-          message.insert("message", QJsonValue(pluginMessages[j].message));
-          messages.append(message);
+          report.add("messages.type", type);
+          report.add("messages.message", pluginMessages[j].message);
         }
       }
-
-      modInfo.insert("messages", messages);
 
       unsigned int dirtyState = 0;
       res = LFUNC(loot_get_dirty_info)(db, sortedPlugins[i], &dirtyState);
       if (res != LVAR(loot_ok)) {
         progress((boost::format("failed to retrieve plugin messages: %1%") % lootErrorString(res)).str());
       } else {
-        QString dirty = dirtyState == LVAR(loot_needs_cleaning_yes) ? "yes"
+        const char  *dirty = dirtyState == LVAR(loot_needs_cleaning_yes) ? "yes"
                       : dirtyState == LVAR(loot_needs_cleaning_no)  ? "no"
                       : "unknown";
-        modInfo.insert("dirty", dirty);
+        report.add("dirty", dirty);
       }
-      report.append(modInfo);
     }
 
-    QJsonDocument doc(report);
-    QFile output(m_OutputPath.c_str());
-    output.open(QIODevice::WriteOnly);
-    output.write(doc.toJson());
-    output.close();
+    std::ofstream buf;
+    buf.open(m_OutputPath.c_str());
+    write_json(buf, report, false);
   } catch (const std::exception &e) {
     errorOccured((boost::format("LOOT failed: %1%") % e.what()).str());
   }

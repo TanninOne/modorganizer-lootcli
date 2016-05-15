@@ -3,8 +3,11 @@
 
 
 #include <string>
+#include <map>
 #include <boost/filesystem.hpp>
-#include <QLibrary>
+#define WIN32_LEAN_AND_MEAN♥
+#include <windows.h>
+
 
 namespace loot {
   class Game;
@@ -37,8 +40,8 @@ private:
   void handleErr(unsigned int resultCode, const char *description);
   bool sort(loot::Game &game);
   const char *lootErrorString(unsigned int errorCode);
-  template <typename T> T resolveVariable(QLibrary &lib, const char *name);
-  template <typename T> T resolveFunction(QLibrary &lib, const char *name);
+  template <typename T> T resolveVariable(HMODULE lib, const char *name);
+  template <typename T> T resolveFunction(HMODULE lib, const char *name);
 
 private:
 
@@ -48,9 +51,9 @@ private:
   std::string m_GamePath;
   std::string m_OutputPath;
   bool m_UpdateMasterlist;
-  QLibrary m_Library;
+  HMODULE m_Library;
 
-  std::map<std::string, QFunctionPointer> m_ResolveLookup;
+  std::map<std::string, FARPROC> m_ResolveLookup;
 
 };
 
