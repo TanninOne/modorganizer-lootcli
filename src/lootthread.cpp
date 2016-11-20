@@ -261,7 +261,7 @@ void LOOTWorker::run()
       progress((boost::format("failed to load lists: %1%") % lootErrorString(res)).str());
     }
 
-    res = LFUNC(loot_eval_lists)(db, LVAR(loot_lang_any));
+    res = LFUNC(loot_eval_lists)(db, LVAR(loot_lang_english));
     if (res != LVAR(loot_ok)) {
       progress((boost::format("failed to evaluate lists: %1%") % lootErrorString(res)).str());
     }
