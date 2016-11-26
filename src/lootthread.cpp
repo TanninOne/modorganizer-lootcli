@@ -36,9 +36,9 @@ LOOTWorker::LOOTWorker()
   , m_Language(0)
   , m_GameName("Skyrim")
 {
-  m_Library = LoadLibraryW(L"loot32.dll");
+  m_Library = LoadLibraryW(L"loot_api.dll");
   if (m_Library == nullptr) {
-    throw std::runtime_error("failed to load loot32.dll");
+    throw std::runtime_error("failed to load loot_api.dll");
   }
 }
 
