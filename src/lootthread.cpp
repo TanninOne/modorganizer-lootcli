@@ -2,20 +2,27 @@
 #pragma warning (push, 0)
 #include <loot/api.h>
 #pragma warning (pop)
-#include <map>
-#include <list>
+
 #include <boost/assign.hpp>
-#include <boost/thread.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <Shlobj.h>
-#include <ctype.h>
 
+#include <ctype.h>
+#include <map>
+#include <exception>
+#include <stdio.h>
+#include <stddef.h>
+#include <algorithm>
+#include <stdexcept>
+#include <utility>
+#include <sstream>
 
 using namespace loot;
 namespace fs = boost::filesystem;
@@ -29,9 +36,9 @@ LOOTWorker::LOOTWorker()
   , m_Language(0)
   , m_GameName("Skyrim")
 {
-  m_Library = LoadLibraryW(L"loot32.dll");
+  m_Library = LoadLibraryW(L"loot_api.dll");
   if (m_Library == nullptr) {
-    throw std::runtime_error("failed to load loot32.dll");
+    throw std::runtime_error("failed to load loot_api.dll");
   }
 }
 
@@ -208,7 +215,7 @@ const char *LOOTWorker::repoUrl()
 
 void LOOTWorker::run()
 {
-  loot_db db;
+  loot_db *db;
 
   try {
     // ensure the loot directory exists
@@ -254,12 +261,12 @@ void LOOTWorker::run()
       progress((boost::format("failed to load lists: %1%") % lootErrorString(res)).str());
     }
 
-    res = LFUNC(loot_eval_lists)(db, LVAR(loot_lang_any));
+    res = LFUNC(loot_eval_lists)(db, LVAR(loot_lang_english));
     if (res != LVAR(loot_ok)) {
       progress((boost::format("failed to evaluate lists: %1%") % lootErrorString(res)).str());
     }
 
-    char **sortedPlugins;
+    char const * const *sortedPlugins;
     size_t numPlugins = 0;
 
     progress("sorting plugins");
@@ -280,7 +287,7 @@ void LOOTWorker::run()
     for (size_t i = 0; i < numPlugins; ++i) {
       report.add("name", sortedPlugins[i]);
 
-      loot_message *pluginMessages = nullptr;
+      loot_message const *pluginMessages = nullptr;
       size_t numMessages = 0;
       res = LFUNC(loot_get_plugin_messages)(db, sortedPlugins[i], &pluginMessages, &numMessages);
       if (res != LVAR(loot_ok)) {
@@ -326,7 +333,6 @@ void LOOTWorker::run()
   progress("done");
 
   LFUNC(loot_destroy_db)(db);
-  LFUNC(loot_cleanup)();
 }
 
 void LOOTWorker::progress(const std::string &step)

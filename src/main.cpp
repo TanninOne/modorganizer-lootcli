@@ -1,7 +1,11 @@
+#include <exception>
 #include <iostream>
+#include <locale>
+#include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
-#include <algorithm>
-#include <clocale>
+
 #include <boost/locale.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/log/core.hpp>
@@ -10,6 +14,7 @@
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/console.hpp>
 #include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
+
 #include "lootthread.h"
 
 using namespace std;
