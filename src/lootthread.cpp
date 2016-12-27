@@ -1,6 +1,8 @@
 #include "lootthread.h"
 #pragma warning (push, 0)
-#include <loot/api.h>
+
+//#include <loot/api.h>
+
 #pragma warning (pop)
 
 #include <boost/assign.hpp>
@@ -23,6 +25,8 @@
 #include <stdexcept>
 #include <utility>
 #include <sstream>
+#include <fstream>
+#include <memory>
 
 using namespace loot;
 namespace fs = boost::filesystem;
@@ -32,19 +36,19 @@ using boost::property_tree::write_json;
 
 
 LOOTWorker::LOOTWorker()
-  : m_GameId(0)
-  , m_Language(0)
+  : m_GameId(GameType::tes5)
+  , m_Language(LanguageCode::english)
   , m_GameName("Skyrim")
 {
-  m_Library = LoadLibraryW(L"loot_api.dll");
+  /*m_Library = LoadLibraryW(L"loot_api.dll");
   if (m_Library == nullptr) {
     throw std::runtime_error("failed to load loot_api.dll");
-  }
+  }*/
 }
 
 
-#define LVAR(variable) resolveVariable<decltype(variable)>(m_Library, #variable)
-#define LFUNC(func) resolveFunction<decltype(&func)>(m_Library, #func)
+//#define LVAR(variable) resolveVariable<decltype(variable)>(m_Library, #variable)
+//#define LFUNC(func) resolveFunction<decltype(&func)>(m_Library, #func)
 
 
 std::string ToLower(const std::string &text)
@@ -55,7 +59,7 @@ std::string ToLower(const std::string &text)
 }
 
 
-const char *LOOTWorker::lootErrorString(unsigned int errorCode)
+/*const char *LOOTWorker::lootErrorString(unsigned int errorCode)
 {
   // can't use switch-case here because the loot_error constants are externs
   if (errorCode == LVAR(loot_error_liblo_error))         return "There was an error in performing a load order operation.";
@@ -71,27 +75,12 @@ const char *LOOTWorker::lootErrorString(unsigned int errorCode)
   if (errorCode == LVAR(loot_error_windows_error))       return "An error occurred during a call to the Windows API.";
   if (errorCode == LVAR(loot_error_sorting_error))       return "An error occurred while sorting plugins.";
   return "Unknown error code";
-}
+}*/
 
 
 
-template <typename T> T LOOTWorker::resolveVariable(HMODULE lib, const char *name)
+/*template <typename T> T LOOTWorker::resolveVariable(HMODULE lib, const char *name)
 {
-/*  auto iter = m_ResolveLookup.find(name);
-  QFunctionPointer ptr;
-  if (iter == m_ResolveLookup.end()) {
-    ptr = lib.resolve(name);
-    m_ResolveLookup.insert(std::make_pair(std::string(name), ptr));
-  } else {
-    ptr = iter->second;
-  }
-
-  if (ptr == NULL) {
-    throw std::runtime_error(QObject::tr("invalid dll: %1").arg(lib.errorString()).toLatin1().constData());
-  }
-
-  return *reinterpret_cast<T*>(ptr);*/
-
   auto iter = m_ResolveLookup.find(name);
 
   FARPROC ptr;
@@ -107,10 +96,10 @@ template <typename T> T LOOTWorker::resolveVariable(HMODULE lib, const char *nam
   }
 
   return *reinterpret_cast<T*>(ptr);
-}
+}*/
 
 
-template <typename T> T LOOTWorker::resolveFunction(HMODULE lib, const char *name)
+/*template <typename T> T LOOTWorker::resolveFunction(HMODULE lib, const char *name)
 {
   auto iter = m_ResolveLookup.find(name);
 
@@ -127,21 +116,25 @@ template <typename T> T LOOTWorker::resolveFunction(HMODULE lib, const char *nam
   }
 
   return *reinterpret_cast<T*>(ptr);
-}
+}*/
 
 
 void LOOTWorker::setGame(const std::string &gameName)
 {
-  static std::map<std::string, unsigned int> gameMap = boost::assign::map_list_of
-    ( "oblivion", LVAR(loot_game_tes4) )
-    ( "fallout3", LVAR(loot_game_fo3) )
-    ( "fallout4", LVAR(loot_game_fo4) )
-    ( "falloutnv", LVAR(loot_game_fonv) )
-    ( "skyrim", LVAR(loot_game_tes5) );
+  static std::map<std::string, GameType> gameMap = boost::assign::map_list_of
+    ( "oblivion", GameType::tes4 )
+    ( "fallout3", GameType::fo3 )
+    ( "fallout4", GameType::fo4 )
+    ( "falloutnv", GameType::fonv )
+    ( "skyrim", GameType::tes5 )
+	( "skyrimse", GameType::tes5se );
 
   auto iter = gameMap.find(ToLower(gameName));
   if (iter != gameMap.end()) {
     m_GameName = gameName;
+    if(ToLower(gameName)=="skyrimse"){
+      m_GameName="Skyrim Special Edition";
+    }
     m_GameId = iter->second;
   } else {
     throw std::runtime_error((boost::format("invalid game name \"%1%\"") % gameName).str());
@@ -162,8 +155,11 @@ void LOOTWorker::setUpdateMasterlist(bool update)
 {
   m_UpdateMasterlist = update;
 }
+void LOOTWorker::setPluginListPath(const std::string &pluginListPath){
+  m_PluginListPath=pluginListPath;
+}
 
-void LOOTWorker::handleErr(unsigned int resultCode, const char *description)
+/*void LOOTWorker::handleErr(unsigned int resultCode, const char *description)
 {
   if (resultCode != LVAR(loot_ok)) {
     const char *errMessage;
@@ -172,7 +168,7 @@ void LOOTWorker::handleErr(unsigned int resultCode, const char *description)
   } else {
     progress(description);
   }
-}
+}*/
 
 
 boost::filesystem::path GetLOOTAppData() {
@@ -198,16 +194,20 @@ boost::filesystem::path LOOTWorker::userlistPath()
   return GetLOOTAppData() / m_GameName / "userlist.yaml";
 }
 
-const char *LOOTWorker::repoUrl()
+std::string LOOTWorker::repoUrl()
 {
-  if (m_GameId == LVAR(loot_game_tes4))
+  if (m_GameId == GameType::tes4)
     return "https://github.com/loot/oblivion.git";
-  else if (m_GameId == LVAR(loot_game_tes5))
+  else if (m_GameId == GameType::tes5)
     return "https://github.com/loot/skyrim.git";
-  else if (m_GameId == LVAR(loot_game_fo3))
+  else if (m_GameId == GameType::fo3)
     return "https://github.com/loot/fallout3.git";
-  else if (m_GameId == LVAR(loot_game_fonv))
+  else if (m_GameId == GameType::fonv)
     return "https://github.com/loot/falloutnv.git";
+  else if(m_GameId == GameType::tes5se)
+    return "https://github.com/loot/skyrimse.git";
+  else if(m_GameId == GameType::fo4)
+    return "https://github.com/loot/fallout4.git";
   else
     return "";
 }
@@ -215,7 +215,6 @@ const char *LOOTWorker::repoUrl()
 
 void LOOTWorker::run()
 {
-  loot_db *db;
 
   try {
     // ensure the loot directory exists
@@ -228,45 +227,83 @@ void LOOTWorker::run()
       fs::create_directory(lootAppData);
     }
 
-    unsigned int res = LFUNC(loot_create_db)(&db, m_GameId, m_GamePath.c_str(), nullptr);
+    /*unsigned int res = LFUNC(loot_create_db)(&db, m_GameId, m_GamePath.c_str(), nullptr);
     if (res != LVAR(loot_ok)) {
       errorOccured((boost::format("failed to create db: %1%") % lootErrorString(res)).str());
       return;
-    }
+    }*/
+    auto db=CreateDatabase(m_GameId,m_GamePath);
 
     bool mlUpdated = false;
     if (m_UpdateMasterlist) {
-      progress("updating masterlist");
-      if (!fs::exists(masterlistPath())) {
-        fs::create_directories(masterlistPath());
+      progress("checking masterlist existence");
+      if (!fs::exists(masterlistPath().parent_path())) {
+        fs::create_directories(masterlistPath().parent_path());
       }
-      unsigned int res = LFUNC(loot_update_masterlist)(db
+      progress("updating masterlist");
+      
+      errorOccured("db->UpdateMasterlist("+masterlistPath().string()+","+repoUrl()+",v0.10)");
+      mlUpdated = db->UpdateMasterlist(masterlistPath().string(),repoUrl(),"v0.10");
+      
+      /*unsigned int res = LFUNC(loot_update_masterlist)(db
                                                       , masterlistPath().string().c_str()
                                                       , repoUrl()
                                                       , "master"
                                                       , &mlUpdated);
       if (res != LVAR(loot_ok)) {
         progress((boost::format("failed to update masterlist: %1%") % lootErrorString(res)).str());
-      }
+      }*/
     }
 
     fs::path userlist = userlistPath();
-
-
-    res = LFUNC(loot_load_lists)(db
+    
+    progress("loading lists");
+    db->LoadLists(masterlistPath().string(),fs::exists(userlist)?userlistPath().string():"");
+    
+    /*res = LFUNC(loot_load_lists)(db
                                  , masterlistPath().string().c_str()
                                  , fs::exists(userlist) ? userlistPath().string().c_str()
                                                         : nullptr);
     if (res != LVAR(loot_ok)) {
       progress((boost::format("failed to load lists: %1%") % lootErrorString(res)).str());
-    }
-
-    res = LFUNC(loot_eval_lists)(db, LVAR(loot_lang_english));
+    }*/
+    progress("Evaluating lists");
+    db->EvalLists();
+    /*res = LFUNC(loot_eval_lists)(db, LVAR(loot_lang_english));
     if (res != LVAR(loot_ok)) {
       progress((boost::format("failed to evaluate lists: %1%") % lootErrorString(res)).str());
+    }*/
+    progress("Reading loadorder.txt");
+    std::vector<std::string> pluginsList;
+    std::ifstream inf(m_PluginListPath);
+    if(!inf){
+       errorOccured("failed to open loadorder.txt");
+      return;
     }
+    while(inf){
+      std::string plugin;
+      std::getline(inf,plugin);
+      if(!plugin.empty()&&plugin[0]!='#')
+        pluginsList.push_back(plugin);
+    }
+    inf.close();
+    
+    progress("Sorting Plugins");
+    std::vector<std::string> sortedPlugins=db->SortPlugins(pluginsList);
+    
+    progress("Writing loadorder.txt");
+    std::ofstream outf(m_PluginListPath);
+    if(!outf){
+       errorOccured("failed to open loadorder.txt to rewrite it");
+      return;
+    }
+    outf<<"# This file was automatically generated by Mod Organizer."<<std::endl;
+    for(const std::string &plugin: sortedPlugins){
+      outf<<plugin<<std::endl;
+    }
+    outf.close();
 
-    char const * const *sortedPlugins;
+    /*char const * const *sortedPlugins;
     size_t numPlugins = 0;
 
     progress("sorting plugins");
@@ -279,16 +316,37 @@ void LOOTWorker::run()
     res = LFUNC(loot_apply_load_order)(db, sortedPlugins, numPlugins);
     if (res != LVAR(loot_ok)) {
       progress((boost::format("failed to apply load order: %1%") % lootErrorString(res)).str());
-    }
+    }*/
 
     ptree report;
 
     progress("retrieving loot messages");
-    for (size_t i = 0; i < numPlugins; ++i) {
+    for (size_t i = 0; i < sortedPlugins.size(); ++i) {
       report.add("name", sortedPlugins[i]);
-
-      loot_message const *pluginMessages = nullptr;
+      
+      std::vector<SimpleMessage> pluginMessages;
+      db->GetPluginMessages(sortedPlugins[i],m_Language);
+      if(!pluginMessages.empty()){
+        for(SimpleMessage message: pluginMessages){
+          const char *type;
+          if(message.type==MessageType::say){
+            type="info";
+          }else if(message.type==MessageType::warn){
+            type= "warn";
+          }else if(message.type==MessageType::error){
+            type="error";
+          }else{
+            type = "unknown";
+            errorOccured((boost::format("invalid message type %1%") % type).str());
+          }
+          report.add("messages.type", type);
+          report.add("messages.message", message.text);
+        }
+      }
+      
+      /*loot_message const *pluginMessages = nullptr;
       size_t numMessages = 0;
+      
       res = LFUNC(loot_get_plugin_messages)(db, sortedPlugins[i], &pluginMessages, &numMessages);
       if (res != LVAR(loot_ok)) {
         progress((boost::format("failed to retrieve plugin messages: %1%") % lootErrorString(res)).str());
@@ -310,9 +368,19 @@ void LOOTWorker::run()
           report.add("messages.type", type);
           report.add("messages.message", pluginMessages[j].message);
         }
-      }
-
-      unsigned int dirtyState = 0;
+      }*/
+      PluginCleanliness dirtyState = db->GetPluginCleanliness(sortedPlugins[i]);
+      const char *dirty;
+      if(dirtyState==PluginCleanliness::clean){
+        dirty="no";
+      }else if(dirtyState==PluginCleanliness::dirty){
+        dirty="yes";
+      }else if(dirtyState==PluginCleanliness::do_not_clean){
+        dirty="do not clean";
+      }else
+        dirty="unknown";
+      report.add("Needs Cleaning",dirty);
+      /*unsigned int dirtyState = 0;
       res = LFUNC(loot_get_dirty_info)(db, sortedPlugins[i], &dirtyState);
       if (res != LVAR(loot_ok)) {
         progress((boost::format("failed to retrieve plugin messages: %1%") % lootErrorString(res)).str());
@@ -321,7 +389,7 @@ void LOOTWorker::run()
                       : dirtyState == LVAR(loot_needs_cleaning_no)  ? "no"
                       : "unknown";
         report.add("dirty", dirty);
-      }
+      }*/
     }
 
     std::ofstream buf;
@@ -332,7 +400,8 @@ void LOOTWorker::run()
   }
   progress("done");
 
-  LFUNC(loot_destroy_db)(db);
+  //LFUNC(loot_destroy_db)(db);
+  
 }
 
 void LOOTWorker::progress(const std::string &step)

@@ -1,7 +1,7 @@
 #ifndef LOOTTHREAD_H
 #define LOOTTHREAD_H
 
-
+#include <loot/api.h>
 #include <string>
 #include <map>
 #include <boost/filesystem.hpp>
@@ -21,6 +21,8 @@ public:
   void setGame(const std::string &gameName);
   void setGamePath(const std::string &gamePath);
   void setOutput(const std::string &outputPath);
+  void setPluginListPath(const std::string &pluginListPath);
+  //void setLanguageCode(const std::string &language_code); //Will add this when I figure out how languages work on MO
 
   void setUpdateMasterlist(bool update);
 
@@ -33,27 +35,28 @@ private:
 
   boost::filesystem::path masterlistPath();
   boost::filesystem::path userlistPath();
-  const char *repoUrl();
+  std::string repoUrl();
 
 private:
 
-  void handleErr(unsigned int resultCode, const char *description);
+ // void handleErr(unsigned int resultCode, const char *description);
   bool sort(loot::Game &game);
-  const char *lootErrorString(unsigned int errorCode);
-  template <typename T> T resolveVariable(HMODULE lib, const char *name);
-  template <typename T> T resolveFunction(HMODULE lib, const char *name);
+  //const char *lootErrorString(unsigned int errorCode);
+  //template <typename T> T resolveVariable(HMODULE lib, const char *name);
+  //template <typename T> T resolveFunction(HMODULE lib, const char *name);
 
 private:
 
-  int m_GameId;
-  int m_Language;
+  loot::GameType m_GameId;
+  loot::LanguageCode m_Language;
   std::string m_GameName;
   std::string m_GamePath;
   std::string m_OutputPath;
+  std::string m_PluginListPath;
   bool m_UpdateMasterlist;
-  HMODULE m_Library;
+  //HMODULE m_Library;
 
-  std::map<std::string, FARPROC> m_ResolveLookup;
+  //std::map<std::string, FARPROC> m_ResolveLookup;
 
 };
 
