@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
     worker.setUpdateMasterlist(!getParameter<bool>(arguments, "skipUpdateMasterlist"));
     worker.setGame(getParameter<std::string>(arguments, "game"));
     worker.setGamePath(getParameter<std::string>(arguments, "gamePath"));
-    worker.setOutput(getParameter<std::string>(arguments, "out"));
     worker.setPluginListPath(getParameter<std::string>(arguments, "pluginListPath"));
+    worker.setOutput(getParameter<std::string>(arguments, "out"));
     worker.run();
     return 0;
   } catch (const std::exception &e) {

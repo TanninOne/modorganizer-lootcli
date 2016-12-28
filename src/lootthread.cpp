@@ -242,7 +242,6 @@ void LOOTWorker::run()
       }
       progress("updating masterlist");
       
-      errorOccured("db->UpdateMasterlist("+masterlistPath().string()+","+repoUrl()+",v0.10)");
       mlUpdated = db->UpdateMasterlist(masterlistPath().string(),repoUrl(),"v0.10");
       
       /*unsigned int res = LFUNC(loot_update_masterlist)(db
