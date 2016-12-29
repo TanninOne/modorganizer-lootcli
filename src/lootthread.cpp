@@ -79,7 +79,7 @@ std::string ToLower(const std::string &text)
 
 
 
-/*template <typename T> T LOOTWorker::resolveVariable(HMODULE lib, const char *name)
+template <typename T> T LOOTWorker::resolveVariable(HMODULE lib, const char *name)
 {
   auto iter = m_ResolveLookup.find(name);
 
@@ -96,10 +96,10 @@ std::string ToLower(const std::string &text)
   }
 
   return *reinterpret_cast<T*>(ptr);
-}*/
+}
 
 
-/*template <typename T> T LOOTWorker::resolveFunction(HMODULE lib, const char *name)
+template <typename T> T LOOTWorker::resolveFunction(HMODULE lib, const char *name)
 {
   auto iter = m_ResolveLookup.find(name);
 
@@ -116,7 +116,7 @@ std::string ToLower(const std::string &text)
   }
 
   return *reinterpret_cast<T*>(ptr);
-}*/
+}
 
 
 void LOOTWorker::setGame(const std::string &gameName)
@@ -232,7 +232,7 @@ void LOOTWorker::run()
       errorOccured((boost::format("failed to create db: %1%") % lootErrorString(res)).str());
       return;
     }*/
-    auto db=CreateDatabase(m_GameId,m_GamePath);
+    auto db=LFUNC(CreateDatabase)(m_GameId,m_GamePath);
 
     bool mlUpdated = false;
     if (m_UpdateMasterlist) {
@@ -368,6 +368,7 @@ void LOOTWorker::run()
           report.add("messages.message", pluginMessages[j].message);
         }
       }*/
+	  
       PluginCleanliness dirtyState = db->GetPluginCleanliness(sortedPlugins[i]);
       const char *dirty;
       if(dirtyState==PluginCleanliness::clean){
