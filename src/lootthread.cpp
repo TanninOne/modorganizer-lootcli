@@ -276,7 +276,7 @@ void LOOTWorker::run()
     std::vector<std::string> pluginsList;
     std::ifstream inf(m_PluginListPath);
     if(!inf){
-       errorOccured("failed to open loadorder.txt");
+       errorOccured("failed to open "+ m_PluginListPath);
       return;
     }
     while(inf){

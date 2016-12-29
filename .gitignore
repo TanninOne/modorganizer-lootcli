@@ -3,3 +3,4 @@ CMakeLists.txt.user
 edit
 stderr.log
 stdout.log
+*.bak
