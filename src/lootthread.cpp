@@ -40,15 +40,7 @@ LOOTWorker::LOOTWorker()
   , m_Language(LanguageCode::english)
   , m_GameName("Skyrim")
 {
-  /*m_Library = LoadLibraryW(L"loot_api.dll");
-  if (m_Library == nullptr) {
-    throw std::runtime_error("failed to load loot_api.dll");
-  }*/
 }
-
-
-//#define LVAR(variable) resolveVariable<decltype(variable)>(m_Library, #variable)
-//#define LFUNC(func) resolveFunction<decltype(&func)>(m_Library, #func)
 
 
 std::string ToLower(const std::string &text)
@@ -56,66 +48,6 @@ std::string ToLower(const std::string &text)
   std::string result = text;
   std::transform(text.begin(), text.end(), result.begin(), tolower);
   return result;
-}
-
-
-/*const char *LOOTWorker::lootErrorString(unsigned int errorCode)
-{
-  // can't use switch-case here because the loot_error constants are externs
-  if (errorCode == LVAR(loot_error_liblo_error))         return "There was an error in performing a load order operation.";
-  if (errorCode == LVAR(loot_error_file_write_fail))     return "A file could not be written to.";
-  if (errorCode == LVAR(loot_error_parse_fail))          return "There was an error parsing the file.";
-  if (errorCode == LVAR(loot_error_condition_eval_fail)) return "There was an error evaluating the conditionals in a metadata file.";
-  if (errorCode == LVAR(loot_error_regex_eval_fail))     return "There was an error evaluating the regular expressions in a metadata file.";
-  if (errorCode == LVAR(loot_error_no_mem))              return "The API was unable to allocate the required memory.";
-  if (errorCode == LVAR(loot_error_invalid_args))        return "Invalid arguments were given for the function.";
-  if (errorCode == LVAR(loot_error_no_tag_map))          return "No Bash Tag map has been generated yet.";
-  if (errorCode == LVAR(loot_error_path_not_found))      return "A file or folder path could not be found.";
-  if (errorCode == LVAR(loot_error_no_game_detected))    return "The given game could not be found.";
-  if (errorCode == LVAR(loot_error_windows_error))       return "An error occurred during a call to the Windows API.";
-  if (errorCode == LVAR(loot_error_sorting_error))       return "An error occurred while sorting plugins.";
-  return "Unknown error code";
-}*/
-
-
-
-template <typename T> T LOOTWorker::resolveVariable(HMODULE lib, const char *name)
-{
-  auto iter = m_ResolveLookup.find(name);
-
-  FARPROC ptr;
-  if (iter == m_ResolveLookup.end()) {
-    ptr = GetProcAddress(lib, name);
-    m_ResolveLookup.insert(std::make_pair(std::string(name), ptr));
-  } else {
-    ptr = iter->second;
-  }
-
-  if (ptr == NULL) {
-    throw std::runtime_error((boost::format("invalid dll, variable %1% not found") % name).str());
-  }
-
-  return *reinterpret_cast<T*>(ptr);
-}
-
-
-template <typename T> T LOOTWorker::resolveFunction(HMODULE lib, const char *name)
-{
-  auto iter = m_ResolveLookup.find(name);
-
-  FARPROC ptr;
-  if (iter == m_ResolveLookup.end()) {
-    ptr = GetProcAddress(lib, name);
-    m_ResolveLookup.insert(std::make_pair(std::string(name), ptr));
-  } else {
-    ptr = iter->second;
-  }
-
-  if (ptr == NULL) {
-    throw std::runtime_error((boost::format("invalid dll, function %1% not found") % name).str());
-  }
-
-  return *reinterpret_cast<T*>(ptr);
 }
 
 
@@ -213,7 +145,7 @@ std::string LOOTWorker::repoUrl()
 }
 
 
-void LOOTWorker::run()
+int LOOTWorker::run()
 {
 
   try {
@@ -221,18 +153,13 @@ void LOOTWorker::run()
     fs::path lootAppData = GetLOOTAppData();
     if (lootAppData.empty()) {
       errorOccured("failed to create loot app data path");
-      return;
+      return 1;
     }
     if (!fs::exists(lootAppData)) {
       fs::create_directory(lootAppData);
     }
 
-    /*unsigned int res = LFUNC(loot_create_db)(&db, m_GameId, m_GamePath.c_str(), nullptr);
-    if (res != LVAR(loot_ok)) {
-      errorOccured((boost::format("failed to create db: %1%") % lootErrorString(res)).str());
-      return;
-    }*/
-    auto db=LFUNC(CreateDatabase)(m_GameId,m_GamePath);
+    auto db=CreateDatabase(m_GameId,m_GamePath);
 
     bool mlUpdated = false;
     if (m_UpdateMasterlist) {
@@ -244,14 +171,6 @@ void LOOTWorker::run()
       
       mlUpdated = db->UpdateMasterlist(masterlistPath().string(),repoUrl(),"v0.10");
       
-      /*unsigned int res = LFUNC(loot_update_masterlist)(db
-                                                      , masterlistPath().string().c_str()
-                                                      , repoUrl()
-                                                      , "master"
-                                                      , &mlUpdated);
-      if (res != LVAR(loot_ok)) {
-        progress((boost::format("failed to update masterlist: %1%") % lootErrorString(res)).str());
-      }*/
     }
 
     fs::path userlist = userlistPath();
@@ -259,25 +178,16 @@ void LOOTWorker::run()
     progress("loading lists");
     db->LoadLists(masterlistPath().string(),fs::exists(userlist)?userlistPath().string():"");
     
-    /*res = LFUNC(loot_load_lists)(db
-                                 , masterlistPath().string().c_str()
-                                 , fs::exists(userlist) ? userlistPath().string().c_str()
-                                                        : nullptr);
-    if (res != LVAR(loot_ok)) {
-      progress((boost::format("failed to load lists: %1%") % lootErrorString(res)).str());
-    }*/
+
     progress("Evaluating lists");
     db->EvalLists();
-    /*res = LFUNC(loot_eval_lists)(db, LVAR(loot_lang_english));
-    if (res != LVAR(loot_ok)) {
-      progress((boost::format("failed to evaluate lists: %1%") % lootErrorString(res)).str());
-    }*/
+
     progress("Reading loadorder.txt");
     std::vector<std::string> pluginsList;
     std::ifstream inf(m_PluginListPath);
     if(!inf){
        errorOccured("failed to open "+ m_PluginListPath);
-      return;
+      return 1;
     }
     while(inf){
       std::string plugin;
@@ -294,28 +204,13 @@ void LOOTWorker::run()
     std::ofstream outf(m_PluginListPath);
     if(!outf){
        errorOccured("failed to open loadorder.txt to rewrite it");
-      return;
+      return 1;
     }
     outf<<"# This file was automatically generated by Mod Organizer."<<std::endl;
     for(const std::string &plugin: sortedPlugins){
       outf<<plugin<<std::endl;
     }
     outf.close();
-
-    /*char const * const *sortedPlugins;
-    size_t numPlugins = 0;
-
-    progress("sorting plugins");
-    res = LFUNC(loot_sort_plugins)(db, &sortedPlugins, &numPlugins);
-    if (res != LVAR(loot_ok)) {
-      progress((boost::format("failed to sort plugins: %1%") % lootErrorString(res)).str());
-    }
-
-    progress("applying load order");
-    res = LFUNC(loot_apply_load_order)(db, sortedPlugins, numPlugins);
-    if (res != LVAR(loot_ok)) {
-      progress((boost::format("failed to apply load order: %1%") % lootErrorString(res)).str());
-    }*/
 
     ptree report;
 
@@ -343,32 +238,6 @@ void LOOTWorker::run()
         }
       }
       
-      /*loot_message const *pluginMessages = nullptr;
-      size_t numMessages = 0;
-      
-      res = LFUNC(loot_get_plugin_messages)(db, sortedPlugins[i], &pluginMessages, &numMessages);
-      if (res != LVAR(loot_ok)) {
-        progress((boost::format("failed to retrieve plugin messages: %1%") % lootErrorString(res)).str());
-      }
-      if (pluginMessages != nullptr) {
-        for (size_t j = 0; j < numMessages; ++j) {
-          const char *type;
-          if (pluginMessages[j].type == LVAR(loot_message_say))
-            type = "info";
-          else if (pluginMessages[j].type == LVAR(loot_message_warn))
-            type = "warn";
-          else if (pluginMessages[j].type == LVAR(loot_message_error))
-            type = "error";
-          else {
-            errorOccured((boost::format("invalid message type %1%") % pluginMessages[j].type).str());
-            type = "unknown";
-          }
-
-          report.add("messages.type", type);
-          report.add("messages.message", pluginMessages[j].message);
-        }
-      }*/
-	  
       PluginCleanliness dirtyState = db->GetPluginCleanliness(sortedPlugins[i]);
       const char *dirty;
       if(dirtyState==PluginCleanliness::clean){
@@ -379,17 +248,7 @@ void LOOTWorker::run()
         dirty="do not clean";
       }else
         dirty="unknown";
-      report.add("Needs Cleaning",dirty);
-      /*unsigned int dirtyState = 0;
-      res = LFUNC(loot_get_dirty_info)(db, sortedPlugins[i], &dirtyState);
-      if (res != LVAR(loot_ok)) {
-        progress((boost::format("failed to retrieve plugin messages: %1%") % lootErrorString(res)).str());
-      } else {
-        const char  *dirty = dirtyState == LVAR(loot_needs_cleaning_yes) ? "yes"
-                      : dirtyState == LVAR(loot_needs_cleaning_no)  ? "no"
-                      : "unknown";
-        report.add("dirty", dirty);
-      }*/
+      report.add("dirty",dirty);
     }
 
     std::ofstream buf;
@@ -397,11 +256,11 @@ void LOOTWorker::run()
     write_json(buf, report, false);
   } catch (const std::exception &e) {
     errorOccured((boost::format("LOOT failed: %1%") % e.what()).str());
+	return 1;
   }
   progress("done");
 
-  //LFUNC(loot_destroy_db)(db);
-  
+  return 0;
 }
 
 void LOOTWorker::progress(const std::string &step)

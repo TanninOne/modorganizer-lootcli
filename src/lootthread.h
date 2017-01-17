@@ -26,7 +26,7 @@ public:
 
   void setUpdateMasterlist(bool update);
 
-  void run();
+  int run();
 
 private:
 
@@ -42,8 +42,8 @@ private:
  // void handleErr(unsigned int resultCode, const char *description);
   bool sort(loot::Game &game);
   //const char *lootErrorString(unsigned int errorCode);
-  template <typename T> T resolveVariable(HMODULE lib, const char *name);
-  template <typename T> T resolveFunction(HMODULE lib, const char *name);
+  //template <typename T> T resolveVariable(HMODULE lib, const char *name);
+  //template <typename T> T resolveFunction(HMODULE lib, const char *name);
 
 private:
 
@@ -54,9 +54,9 @@ private:
   std::string m_OutputPath;
   std::string m_PluginListPath;
   bool m_UpdateMasterlist;
-  HMODULE m_Library;
+  //HMODULE m_Library;
 
-  std::map<std::string, FARPROC> m_ResolveLookup;
+  //std::map<std::string, FARPROC> m_ResolveLookup;
 
 };
 

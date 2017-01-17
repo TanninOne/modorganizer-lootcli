@@ -35,11 +35,13 @@ SET(lib_path "${project_path}/../../install/libs")
 
 INCLUDE_DIRECTORIES(${project_path}/../lootapi/include)
 
-LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
+LINK_DIRECTORIES(${Boost_LIBRARY_DIRS}
+				 ${project_path}/../lootapi)
 
 ADD_EXECUTABLE(${PROJ_NAME} ${${PROJ_NAME}_HDRS} ${${PROJ_NAME}_SRCS})
 TARGET_LINK_LIBRARIES(${PROJ_NAME}
-					  ${Boost_LIBRARIES})
+					  ${Boost_LIBRARIES}
+					  loot_api)
 IF(MSVC)
   SET_TARGET_PROPERTIES(${PROJ_NAME} PROPERTIES LINK_FLAGS "/LARGEADDRESSAWARE")
 ELSE(MSVC)
