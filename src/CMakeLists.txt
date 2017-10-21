@@ -49,8 +49,10 @@ include_directories("${CMAKE_SOURCE_DIR}/src"
                     "${CMAKE_SOURCE_DIR}/include"
                      ${YAML_CPP_INCLUDE_DIRS})
 
+math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
+
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS}
-				 ${project_path}/../lootapi)
+				 ${project_path}/../lootapi/loot_api-0.11.1-18-g65a8509_dev-win${BITS})
 
 ADD_EXECUTABLE			(${PROJ_NAME} ${${PROJ_NAME}_HDRS} ${${PROJ_NAME}_SRCS})
 add_dependencies		(${PROJ_NAME} yaml-cpp)
