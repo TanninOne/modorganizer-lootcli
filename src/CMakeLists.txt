@@ -1,4 +1,7 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 2.8)
+include(ExternalProject)
+
+set(PROJ_NAME lootcli)
 
 CMAKE_POLICY(SET CMP0020 NEW)
 #CMAKE_POLICY(SET CMP0043 NEW)
@@ -11,13 +14,13 @@ endif()
 
 
 SET(${PROJ_NAME}_SRCS
+  game_settings.cpp
   lootthread.cpp
-  main.cpp
-  )
+  main.cpp)
 
 SET(${PROJ_NAME}_HDRS
-  lootthread.h
-  )
+  game_settings.h
+  lootthread.h)
 
 # Boost
 SET(Boost_USE_STATIC_LIBS        ON)
@@ -31,17 +34,30 @@ SET(default_project_path "${CMAKE_SOURCE_DIR}/..")
 GET_FILENAME_COMPONENT(${default_project_path} ${default_project_path} REALPATH)
 
 SET(project_path "${default_project_path}" CACHE PATH "path to the other mo projects")
-SET(lib_path "${project_path}/../../install/libs")
 
-INCLUDE_DIRECTORIES(${project_path}/../lootapi/include)
+ExternalProject_Add(yaml-cpp
+                    PREFIX "external"
+                    URL "https://github.com/WrinklyNinja/yaml-cpp/archive/patched-for-loot.tar.gz"
+                    CMAKE_ARGS -DMSVC_SHARED_RT=${MSVC_SHARED_RUNTIME}
+                    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target yaml-cpp --config $(CONFIGURATION)
+                    INSTALL_COMMAND "")
+ExternalProject_Get_Property(yaml-cpp SOURCE_DIR BINARY_DIR)
+set(YAML_CPP_INCLUDE_DIRS "${SOURCE_DIR}/include")
+set(YAML_CPP_LIBRARIES "${BINARY_DIR}/${CMAKE_CFG_INTDIR}/libyaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX}")
+
+include_directories("${CMAKE_SOURCE_DIR}/src"
+                    "${CMAKE_SOURCE_DIR}/include"
+                     ${YAML_CPP_INCLUDE_DIRS})
 
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS}
 				 ${project_path}/../lootapi)
 
-ADD_EXECUTABLE(${PROJ_NAME} ${${PROJ_NAME}_HDRS} ${${PROJ_NAME}_SRCS})
-TARGET_LINK_LIBRARIES(${PROJ_NAME}
-					  ${Boost_LIBRARIES}
-					  loot_api)
+ADD_EXECUTABLE			(${PROJ_NAME} ${${PROJ_NAME}_HDRS} ${${PROJ_NAME}_SRCS})
+add_dependencies		(${PROJ_NAME} yaml-cpp)
+TARGET_LINK_LIBRARIES	(${PROJ_NAME}
+						${Boost_LIBRARIES}
+						loot_api
+						${YAML_CPP_LIBRARIES})
 IF(MSVC)
   SET_TARGET_PROPERTIES(${PROJ_NAME} PROPERTIES LINK_FLAGS "/LARGEADDRESSAWARE")
 ELSE(MSVC)

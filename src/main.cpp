@@ -51,9 +51,6 @@ int main(int argc, char *argv[])
   logging::core::get()->set_filter(
     logging::trivial::severity >= logging::trivial::info
   );
-  std::locale::global(boost::locale::generator().generate(""));
-  cout.imbue(std::locale());
-  boost::filesystem::path::imbue(std::locale(std::locale(), new boost::filesystem::detail::utf8_codecvt_facet()));
 
   std::vector<std::string> arguments;
   std::copy(argv + 1, argv + argc, std::back_inserter(arguments));
