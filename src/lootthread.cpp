@@ -51,7 +51,6 @@ LOOTWorker::LOOTWorker()
 {
 }
 
-
 std::string ToLower(const std::string &text)
 {
 	std::string result = text;
@@ -227,6 +226,31 @@ int LOOTWorker::run()
 	std::locale::global(gen("en.UTF-8"));
 	InitialiseLocale("en.UTF-8");
 	fs::path::imbue(std::locale());
+    SetLoggingCallback([&](loot::LogLevel level, const char * message) {
+        switch (level) {
+            case loot::LogLevel::trace:
+                BOOST_LOG_TRIVIAL(trace) << message;
+                break;
+            case loot::LogLevel::debug:
+                BOOST_LOG_TRIVIAL(debug) << message;
+                break;
+            case loot::LogLevel::info:
+                BOOST_LOG_TRIVIAL(info) << message;
+                break;
+            case loot::LogLevel::warning:
+                BOOST_LOG_TRIVIAL(warning) << message;
+                break;
+            case loot::LogLevel::error:
+                BOOST_LOG_TRIVIAL(error) << message;
+                break;
+            case loot::LogLevel::fatal:
+                BOOST_LOG_TRIVIAL(fatal) << message;
+                break;
+            default:
+                BOOST_LOG_TRIVIAL(trace) << message;
+                break;
+        }
+    });
 
 	try {
 		// ensure the loot directory exists
@@ -354,30 +378,4 @@ void LOOTWorker::errorOccured(const std::string &message)
 {
 	BOOST_LOG_TRIVIAL(error) << message;
 	fflush(stdout);
-}
-
-void LOOTWorker::apiLogCallback(LogLevel level, const char * message) {
-	switch (level) {
-	case LogLevel::trace:
-		BOOST_LOG_TRIVIAL(trace) << message;
-		break;
-	case LogLevel::debug:
-		BOOST_LOG_TRIVIAL(debug) << message;
-		break;
-	case LogLevel::info:
-		BOOST_LOG_TRIVIAL(info) << message;
-		break;
-	case LogLevel::warning:
-		BOOST_LOG_TRIVIAL(warning) << message;
-		break;
-	case LogLevel::error:
-		BOOST_LOG_TRIVIAL(error) << message;
-		break;
-	case LogLevel::fatal:
-		BOOST_LOG_TRIVIAL(fatal) << message;
-		break;
-	default:
-		BOOST_LOG_TRIVIAL(trace) << message;
-		break;
-	}
 }

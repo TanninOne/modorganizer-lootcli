@@ -37,7 +37,6 @@ private:
 
   void progress(const std::string &step);
   void errorOccured(const std::string &message);
-  void apiLogCallback(LogLevel level, const char * message);
   void getSettings(YAML::Node& settings);
 
   boost::filesystem::path masterlistPath();
