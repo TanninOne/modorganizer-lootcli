@@ -31,7 +31,7 @@ FIND_PACKAGE(Boost REQUIRED)
 
 INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
 
-SET(default_project_path "${CMAKE_SOURCE_DIR}/..")
+SET(default_project_path "${DEPENDENCIES_DIR}")
 GET_FILENAME_COMPONENT(${default_project_path} ${default_project_path} REALPATH)
 
 SET(project_path "${default_project_path}" CACHE PATH "path to the other mo projects")
@@ -49,7 +49,7 @@ set(YAML_CPP_LIBRARIES "${BINARY_DIR}/${CMAKE_CFG_INTDIR}/libyaml-cpp${CMAKE_STA
 
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
-set(LOOT_API_PATH "${project_path}/../lootapi/loot_api-0.11.1-18-g65a8509_dev-win${BITS}" CACHE PATH "path to loot api files")
+set(LOOT_API_PATH "${DEPENDENCIES_DIR}/lootapi" CACHE PATH "path to loot api files")
 
 include_directories(${CMAKE_SOURCE_DIR}/src
 		            ${LOOT_API_PATH}/include
