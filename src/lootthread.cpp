@@ -264,7 +264,9 @@ int LOOTWorker::run()
 			fs::create_directory(lootAppData);
 		}
 
-		auto gameHandle = CreateGameHandle(m_GameId, m_GamePath);
+		fs::path profile(m_PluginListPath);
+		profile = profile.parent_path();
+		auto gameHandle = CreateGameHandle(m_GameId, m_GamePath, profile.string());
 		auto db = gameHandle->GetDatabase();
 
 		fs::path settings = settingsPath();
@@ -293,7 +295,7 @@ int LOOTWorker::run()
 		progress("loading lists");
 		db->LoadLists(masterlistPath().string(), fs::exists(userlist) ? userlistPath().string() : "");
 
-		progress("Reading loadorder.txt");
+		progress("Reading plugins");
 		std::vector<std::string> pluginsList;
 		for (fs::directory_iterator it(dataPath()); it != fs::directory_iterator(); ++it) {
 			if (fs::is_regular_file(it->status()) && gameHandle->IsValidPlugin(it->path().filename().string())) {
@@ -305,6 +307,7 @@ int LOOTWorker::run()
 		}
 
 		progress("Sorting Plugins");
+
 		std::vector<std::string> sortedPlugins = gameHandle->SortPlugins(pluginsList);
 
 		progress("Writing loadorder.txt");
