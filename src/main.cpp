@@ -5,6 +5,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <windows.h>
+#include <stdio.h>
 
 #include <boost/locale.hpp>
 #include <boost/lexical_cast.hpp>
@@ -44,8 +46,10 @@ bool getParameter<bool>(const std::vector<std::string> &arguments, const std::st
   }
 }
 
-
-int main(int argc, char *argv[])
+int WinMain(HINSTANCE hInstance,
+	HINSTANCE hPrevInstance,
+	LPTSTR    lpCmdLine,
+	int       nCmdShow)
 {
   boost::log::add_console_log(std::cout, boost::log::keywords::format = "%Message%");
   logging::core::get()->set_filter(
@@ -53,7 +57,21 @@ int main(int argc, char *argv[])
   );
 
   std::vector<std::string> arguments;
-  std::copy(argv + 1, argv + argc, std::back_inserter(arguments));
+  int argc;
+  LPWSTR *argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+  if (argv)
+  {
+	  for (int i = 0; i < argc; ++i)
+	  {
+		  size_t num_converted;
+		  std::vector<char> arg(wcslen(argv[i]) + 1);
+
+		  wcstombs_s(&num_converted, &(arg[0]), arg.size(), argv[i], arg.size() - 1);
+
+		  arguments.push_back(&(arg[0]));
+	  }
+  }
 
   // design rationale: this was designed to have the actual loot stuff run in a separate thread. That turned
   // out to be unnecessary atm.
