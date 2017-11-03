@@ -229,13 +229,13 @@ int LOOTWorker::run()
     SetLoggingCallback([&](loot::LogLevel level, const char * message) {
         switch (level) {
             case loot::LogLevel::trace:
-                BOOST_LOG_TRIVIAL(trace) << message;
+				progress();
                 break;
             case loot::LogLevel::debug:
-                BOOST_LOG_TRIVIAL(debug) << message;
+				progress();
                 break;
             case loot::LogLevel::info:
-                BOOST_LOG_TRIVIAL(info) << message;
+                progress(message);
                 break;
             case loot::LogLevel::warning:
                 BOOST_LOG_TRIVIAL(warning) << message;
@@ -278,11 +278,13 @@ int LOOTWorker::run()
 
 		bool mlUpdated = false;
 		if (m_UpdateMasterlist) {
-			progress("checking masterlist existence");
+			m_ProgressStep = "Checking Masterlist Existence";
+			progress();
 			if (!fs::exists(masterlistPath())) {
 				fs::create_directories(masterlistPath().parent_path());
 			}
-			progress("updating masterlist");
+			m_ProgressStep = "Updating Masterlist";
+			progress();
 
 			mlUpdated = db->UpdateMasterlist(masterlistPath().string(), m_GameSettings.RepoURL(), m_GameSettings.RepoBranch());
 			if (mlUpdated && !db->IsLatestMasterlist(masterlistPath().string(), m_GameSettings.RepoBranch())) {
@@ -292,10 +294,12 @@ int LOOTWorker::run()
 
 		fs::path userlist = userlistPath();
 
-		progress("loading lists");
+		m_ProgressStep = "Loading Lists";
+		progress();
 		db->LoadLists(masterlistPath().string(), fs::exists(userlist) ? userlistPath().string() : "");
 
-		progress("Reading plugins");
+		m_ProgressStep = "Reading Plugins";
+		progress();
 		std::vector<std::string> pluginsList;
 		for (fs::directory_iterator it(dataPath()); it != fs::directory_iterator(); ++it) {
 			if (fs::is_regular_file(it->status()) && gameHandle->IsValidPlugin(it->path().filename().string())) {
@@ -306,11 +310,13 @@ int LOOTWorker::run()
 			}
 		}
 
-		progress("Sorting Plugins");
+		m_ProgressStep = "Sorting Plugins";
+		progress();
 
 		std::vector<std::string> sortedPlugins = gameHandle->SortPlugins(pluginsList);
 
-		progress("Writing loadorder.txt");
+		m_ProgressStep = "Writing loadorder.txt";
+		progress();
 		std::ofstream outf(m_PluginListPath);
 		if (!outf) {
 			errorOccured("failed to open loadorder.txt to rewrite it");
@@ -324,7 +330,8 @@ int LOOTWorker::run()
 
 		ptree report;
 
-		progress("retrieving loot messages");
+		m_ProgressStep = "Parsing LOOT Messages";
+		progress();
 		for (size_t i = 0; i < sortedPlugins.size(); ++i) {
 			report.add("name", sortedPlugins[i]);
 
@@ -366,14 +373,17 @@ int LOOTWorker::run()
 		errorOccured((boost::format("LOOT failed: %1%") % e.what()).str());
 		return 1;
 	}
-	progress("done");
+	progress("Done!");
 
 	return 0;
 }
 
 void LOOTWorker::progress(const std::string &step)
 {
-	BOOST_LOG_TRIVIAL(info) << "[progress] " << step;
+	BOOST_LOG_TRIVIAL(info) << "[progress] " << m_ProgressStep;
+	if (step.size())
+		BOOST_LOG_TRIVIAL(info) << "[detail] " << step;
+	else
 	fflush(stdout);
 }
 
