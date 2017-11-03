@@ -35,7 +35,7 @@ public:
 
 private:
 
-  void progress(const std::string &step);
+  void progress(const std::string &step = "");
   void errorOccured(const std::string &message);
   void getSettings(YAML::Node& settings);
 
@@ -61,6 +61,7 @@ private:
   std::string m_GamePath;
   std::string m_OutputPath;
   std::string m_PluginListPath;
+  std::string m_ProgressStep;
   bool m_UpdateMasterlist;
   //HMODULE m_Library;
 
