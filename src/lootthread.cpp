@@ -29,7 +29,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
-#include <yaml-cpp/yaml.h>
+#include <cpptoml.h>
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -138,7 +138,7 @@ fs::path LOOTWorker::userlistPath() {
 }
 fs::path LOOTWorker::settingsPath()
 {
-	return GetLOOTAppData() / "settings.yaml";
+	return GetLOOTAppData() / "settings.toml";
 }
 
 fs::path LOOTWorker::l10nPath()
@@ -186,21 +186,107 @@ std::string LOOTWorker::formatDirty(const PluginCleaningData &cleaningData) {
 	return Message(MessageType::warn, info).ToSimpleMessage(m_Language).text;
 }
 
-void LOOTWorker::getSettings(YAML::Node& settings) {
-	m_GameSettings = GameSettings(m_GameId);
-	if (settings["games"]) {
-		std::vector<GameSettings> parsedSettings = settings["games"].as<std::vector<GameSettings>>();
+void LOOTWorker::getSettings(const fs::path& file) {
+  lock_guard<recursive_mutex> guard(mutex_);
 
-		auto pos = find_if(begin(parsedSettings), end(parsedSettings), [&](const GameSettings& gameSettings) {
-			if (gameSettings.Type() == m_GameSettings.Type())
-				return true;
-			return false;
-		});
-		m_GameSettings.SetGamePath(pos->GamePath());
+  auto settings = cpptoml::parse_file(file.string());
+  auto games = settings->get_table_array("games");
+  if (games) {
+    for (const auto& game : *games) {
+      try {
+        GameSettings newSettings;
+
+        auto type = game->get_as<std::string>("type");
+        if (!type) {
+          throw std::runtime_error("'type' key missing from game settings table");
+        }
+
+        auto folder = game->get_as<std::string>("folder");
+        if (!folder) {
+          throw std::runtime_error("'folder' key missing from game settings table");
+        }
+
+        if (*type == "SkyrimSE" && *folder == *type) {
+          type = cpptoml::option<std::string>(
+            GameSettings(GameType::tes5se).FolderName());
+          folder = type;
+
+          auto path = dataPath() / "SkyrimSE";
+          if (boost::filesystem::exists(path)) {
+            boost::filesystem::rename(path, dataPath() / *folder);
+          }
+        }
+
+        if (*type == GameSettings(GameType::tes4).FolderName()) {
+          newSettings = GameSettings(GameType::tes4, *folder);
+        }
+        else if (*type == GameSettings(GameType::tes5).FolderName()) {
+          newSettings = GameSettings(GameType::tes5, *folder);
+        }
+        else if (*type == GameSettings(GameType::tes5se).FolderName()) {
+          newSettings = GameSettings(GameType::tes5se, *folder);
+        }
+        else if (*type == GameSettings(GameType::fo3).FolderName()) {
+          newSettings = GameSettings(GameType::fo3, *folder);
+        }
+        else if (*type == GameSettings(GameType::fonv).FolderName()) {
+          newSettings = GameSettings(GameType::fonv, *folder);
+        }
+        else if (*type == GameSettings(GameType::fo4).FolderName()) {
+          newSettings = GameSettings(GameType::fo4, *folder);
+        }
+        else
+          throw std::runtime_error(
+            "invalid value for 'type' key in game settings table");
+
+        if (newSettings.Type() == m_GameSettings.Type()) {
+
+          auto name = game->get_as<std::string>("name");
+          if (name) {
+            newSettings.SetName(*name);
+          }
+
+          auto master = game->get_as<std::string>("master");
+          if (master) {
+            newSettings.SetMaster(*master);
+          }
+
+          auto repo = game->get_as<std::string>("repo");
+          if (repo) {
+            newSettings.SetRepoURL(*repo);
+          }
+
+          auto branch = game->get_as<std::string>("branch");
+          if (branch) {
+            newSettings.SetRepoBranch(*branch);
+
+            auto defaultGame = GameSettings(newSettings.Type());
+            if (newSettings.RepoURL() == defaultGame.RepoURL() &&
+              newSettings.IsRepoBranchOldDefault()) {
+              newSettings.SetRepoBranch(defaultGame.RepoBranch());
+            }
+          }
+
+          auto path = game->get_as<std::string>("path");
+          if (path) {
+            newSettings.SetGamePath(*path);
+          }
+
+          auto registry = game->get_as<std::string>("registry");
+          if (registry) {
+            newSettings.SetRegistryKey(*registry);
+          }
+
+          m_GameSettings = newSettings;
+          break;
+        }
+      } catch (...) {
+        // Skip invalid games.
+      }
+    }
 	}
 
-	if (settings["language"])
-		m_Language = settings["language"].as<std::string>();
+  m_Language = settings->get_as<std::string>("language").value_or(m_Language);
 
 	if (m_Language != MessageContent::defaultLanguage) {
 		BOOST_LOG_TRIVIAL(debug) << "Initialising language settings.";
@@ -269,12 +355,12 @@ int LOOTWorker::run()
 		auto gameHandle = CreateGameHandle(m_GameId, m_GamePath, profile.string());
 		auto db = gameHandle->GetDatabase();
 
+    m_GameSettings = GameSettings(m_GameId);
+
 		fs::path settings = settingsPath();
 
-		fs::ifstream in(settings);
-		YAML::Node settingsData = YAML::Load(in);
-
-		getSettings(settingsData);
+    if (fs::exists(settings))
+      getSettings(settings);
 
 		bool mlUpdated = false;
 		if (m_UpdateMasterlist) {
