@@ -36,16 +36,14 @@ GET_FILENAME_COMPONENT(${default_project_path} ${default_project_path} REALPATH)
 
 SET(project_path "${default_project_path}" CACHE PATH "path to the other mo projects")
 
-ExternalProject_Add(yaml-cpp
+ExternalProject_Add(cpptoml
                     PREFIX "external"
-                    URL "https://github.com/WrinklyNinja/yaml-cpp/archive/patched-for-loot.tar.gz"
-                    CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF
-		                       -DCMAKE_BUILD_TYPE=Release
-                    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target yaml-cpp --config $(CONFIGURATION)
+                    URL "https://github.com/skystrife/cpptoml/archive/2051836a96a25e5a2d5283be7f633a157848f15e.tar.gz"
+                    CONFIGURE_COMMAND ""
+                    BUILD_COMMAND ""
                     INSTALL_COMMAND "")
-ExternalProject_Get_Property(yaml-cpp SOURCE_DIR BINARY_DIR)
-set(YAML_CPP_INCLUDE_DIRS "${SOURCE_DIR}/include")
-set(YAML_CPP_LIBRARIES "${BINARY_DIR}/${CMAKE_CFG_INTDIR}/libyaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX}")
+ExternalProject_Get_Property(cpptoml SOURCE_DIR)
+set(CPPTOML_INCLUDE_DIRS "${SOURCE_DIR}/include")
 
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
@@ -53,17 +51,16 @@ set(LOOT_API_PATH "${DEPENDENCIES_DIR}/lootapi" CACHE PATH "path to loot api fil
 
 include_directories(${CMAKE_SOURCE_DIR}/src
 		            ${LOOT_API_PATH}/include
-		            ${YAML_CPP_INCLUDE_DIRS})
+		            ${CPPTOML_INCLUDE_DIRS})
 
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS}
 				 ${LOOT_API_PATH})
 
 ADD_EXECUTABLE			(${PROJ_NAME} WIN32 ${${PROJ_NAME}_HDRS} ${${PROJ_NAME}_SRCS})
-add_dependencies		(${PROJ_NAME} yaml-cpp)
+add_dependencies		(${PROJ_NAME} cpptoml)
 TARGET_LINK_LIBRARIES	(${PROJ_NAME}
 						${Boost_LIBRARIES}
-						loot_api
-						${YAML_CPP_LIBRARIES})
+						loot_api)
 IF(MSVC)
   SET_TARGET_PROPERTIES(${PROJ_NAME} PROPERTIES LINK_FLAGS "/LARGEADDRESSAWARE")
 ELSE(MSVC)

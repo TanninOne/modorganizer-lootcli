@@ -7,7 +7,6 @@
 #include <mutex>
 #include <boost/filesystem.hpp>
 #include <game_settings.h>
-#include <yaml-cpp/yaml.h>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
@@ -37,7 +36,7 @@ private:
 
   void progress(const std::string &step = "");
   void errorOccured(const std::string &message);
-  void getSettings(YAML::Node& settings);
+  void getSettings(const boost::filesystem::path& file);
 
   boost::filesystem::path masterlistPath();
   boost::filesystem::path settingsPath();
