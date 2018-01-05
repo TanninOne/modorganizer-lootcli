@@ -65,6 +65,7 @@ void LOOTWorker::setGame(const std::string &gameName)
 	("oblivion", GameType::tes4)
 		("fallout3", GameType::fo3)
 		("fallout4", GameType::fo4)
+		("fallout4vr", GameType::fo4)
 		("falloutnv", GameType::fonv)
 		("skyrim", GameType::tes5)
 		("skyrimse", GameType::tes5se);
