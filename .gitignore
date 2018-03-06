@@ -1,6 +1,9 @@
-build
 CMakeLists.txt.user
 edit
+build
 stderr.log
 stdout.log
 *.bak
+vsbuild
+vs_stderr.log
+vs_stdout.log
