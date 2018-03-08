@@ -47,7 +47,9 @@ set(CPPTOML_INCLUDE_DIRS "${SOURCE_DIR}/include")
 
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
+if(NOT DEFINED ENV{LOOT_API_PATH}) 
 set(LOOT_API_PATH "${DEPENDENCIES_DIR}/lootapi" CACHE PATH "path to loot api files")
+endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/src
 		            ${LOOT_API_PATH}/include
