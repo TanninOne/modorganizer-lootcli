@@ -322,7 +322,7 @@ int LOOTWorker::run()
 				progress();
                 break;
             case loot::LogLevel::info:
-                progress(message);
+                progress();
                 break;
             case loot::LogLevel::warning:
                 BOOST_LOG_TRIVIAL(warning) << message;
