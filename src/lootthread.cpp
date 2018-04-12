@@ -65,10 +65,11 @@ void LOOTWorker::setGame(const std::string &gameName)
 	("oblivion", GameType::tes4)
 		("fallout3", GameType::fo3)
 		("fallout4", GameType::fo4)
-		("fallout4vr", GameType::fo4)
+		("fallout4vr", GameType::fo4vr)
 		("falloutnv", GameType::fonv)
 		("skyrim", GameType::tes5)
 		("skyrimse", GameType::tes5se);
+    ("skyrimvr", GameType::tes5vr);
 
 	auto iter = gameMap.find(ToLower(gameName));
 	if (iter != gameMap.end()) {
@@ -207,17 +208,6 @@ void LOOTWorker::getSettings(const fs::path& file) {
           throw std::runtime_error("'folder' key missing from game settings table");
         }
 
-        if (*type == "SkyrimSE" && *folder == *type) {
-          type = cpptoml::option<std::string>(
-            GameSettings(GameType::tes5se).FolderName());
-          folder = type;
-
-          auto path = dataPath() / "SkyrimSE";
-          if (boost::filesystem::exists(path)) {
-            boost::filesystem::rename(path, dataPath() / *folder);
-          }
-        }
-
         if (*type == GameSettings(GameType::tes4).FolderName()) {
           newSettings = GameSettings(GameType::tes4, *folder);
         }
@@ -227,6 +217,9 @@ void LOOTWorker::getSettings(const fs::path& file) {
         else if (*type == GameSettings(GameType::tes5se).FolderName()) {
           newSettings = GameSettings(GameType::tes5se, *folder);
         }
+        else if (*type == GameSettings(GameType::tes5vr).FolderName()) {
+          newSettings = GameSettings(GameType::tes5vr, *folder);
+        }
         else if (*type == GameSettings(GameType::fo3).FolderName()) {
           newSettings = GameSettings(GameType::fo3, *folder);
         }
@@ -235,6 +228,9 @@ void LOOTWorker::getSettings(const fs::path& file) {
         }
         else if (*type == GameSettings(GameType::fo4).FolderName()) {
           newSettings = GameSettings(GameType::fo4, *folder);
+        }
+        else if (*type == GameSettings(GameType::fo4vr).FolderName()) {
+          newSettings = GameSettings(GameType::fo4vr, *folder);
         }
         else
           throw std::runtime_error(
@@ -400,6 +396,7 @@ int LOOTWorker::run()
 		m_ProgressStep = "Sorting Plugins";
 		progress();
 
+    gameHandle->LoadCurrentLoadOrderState();
 		std::vector<std::string> sortedPlugins = gameHandle->SortPlugins(pluginsList);
 
 		m_ProgressStep = "Writing loadorder.txt";
