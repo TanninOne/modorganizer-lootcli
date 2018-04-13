@@ -62,10 +62,10 @@ std::string ToLower(const std::string &text)
 void LOOTWorker::setGame(const std::string &gameName)
 {
 	static std::map<std::string, GameType> gameMap = boost::assign::map_list_of
-	("oblivion", GameType::tes4)
+	  ("oblivion", GameType::tes4)
 		("fallout3", GameType::fo3)
 		("fallout4", GameType::fo4)
-		("fallout4vr", GameType::fo4)
+		("fallout4vr", GameType::fo4vr)
 		("falloutnv", GameType::fonv)
 		("skyrim", GameType::tes5)
 		("skyrimse", GameType::tes5se);
@@ -207,17 +207,6 @@ void LOOTWorker::getSettings(const fs::path& file) {
           throw std::runtime_error("'folder' key missing from game settings table");
         }
 
-        if (*type == "SkyrimSE" && *folder == *type) {
-          type = cpptoml::option<std::string>(
-            GameSettings(GameType::tes5se).FolderName());
-          folder = type;
-
-          auto path = dataPath() / "SkyrimSE";
-          if (boost::filesystem::exists(path)) {
-            boost::filesystem::rename(path, dataPath() / *folder);
-          }
-        }
-
         if (*type == GameSettings(GameType::tes4).FolderName()) {
           newSettings = GameSettings(GameType::tes4, *folder);
         }
@@ -235,6 +224,9 @@ void LOOTWorker::getSettings(const fs::path& file) {
         }
         else if (*type == GameSettings(GameType::fo4).FolderName()) {
           newSettings = GameSettings(GameType::fo4, *folder);
+        }
+        else if (*type == GameSettings(GameType::fo4vr).FolderName()) {
+          newSettings = GameSettings(GameType::fo4vr, *folder);
         }
         else
           throw std::runtime_error(
@@ -322,7 +314,7 @@ int LOOTWorker::run()
 				progress();
                 break;
             case loot::LogLevel::info:
-                progress(message);
+                progress();
                 break;
             case loot::LogLevel::warning:
                 BOOST_LOG_TRIVIAL(warning) << message;
