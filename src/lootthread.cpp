@@ -69,6 +69,7 @@ void LOOTWorker::setGame(const std::string &gameName)
 		("falloutnv", GameType::fonv)
 		("skyrim", GameType::tes5)
 		("skyrimse", GameType::tes5se);
+    ("skyrimvr", GameType::tes5vr);
 
 	auto iter = gameMap.find(ToLower(gameName));
 	if (iter != gameMap.end()) {
@@ -215,6 +216,9 @@ void LOOTWorker::getSettings(const fs::path& file) {
         }
         else if (*type == GameSettings(GameType::tes5se).FolderName()) {
           newSettings = GameSettings(GameType::tes5se, *folder);
+        }
+        else if (*type == GameSettings(GameType::tes5vr).FolderName()) {
+          newSettings = GameSettings(GameType::tes5vr, *folder);
         }
         else if (*type == GameSettings(GameType::fo3).FolderName()) {
           newSettings = GameSettings(GameType::fo3, *folder);
@@ -392,6 +396,7 @@ int LOOTWorker::run()
 		m_ProgressStep = "Sorting Plugins";
 		progress();
 
+    gameHandle->LoadCurrentLoadOrderState();
 		std::vector<std::string> sortedPlugins = gameHandle->SortPlugins(pluginsList);
 
 		m_ProgressStep = "Writing loadorder.txt";

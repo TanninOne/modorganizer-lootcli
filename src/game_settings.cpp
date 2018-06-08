@@ -11,11 +11,12 @@ namespace loot {
 		"master",
 		"v0.7",
 		"v0.8",
+        "v0.10"
 	});
 
 	GameSettings::GameSettings() : type_(GameType::tes4) {}
 
-	GameSettings::GameSettings(const GameType gameCode, const std::string& folder) : type_(gameCode), repositoryBranch_("v0.10") {
+	GameSettings::GameSettings(const GameType gameCode, const std::string& folder) : type_(gameCode), repositoryBranch_("v0.13") {
 		if (Type() == GameType::tes4) {
 			name_ = "TES IV: Oblivion";
 			registryKey_ = "Software\\Bethesda Softworks\\Oblivion\\Installed Path";
@@ -32,6 +33,12 @@ namespace loot {
 			name_ = "TES V: Skyrim Special Edition";
 			registryKey_ = "Software\\Bethesda Softworks\\Skyrim Special Edition\\Installed Path";
 			lootFolderName_ = "Skyrim Special Edition";
+			masterFile_ = "Skyrim.esm";
+			repositoryURL_ = "https://github.com/loot/skyrimse.git";
+		} else if (Type() == GameType::tes5vr) {
+			name_ = "TES V: Skyrim VR";
+			registryKey_ = "Software\\Bethesda Softworks\\Skyrim VR\\Installed Path";
+			lootFolderName_ = "Skyrim VR";
 			masterFile_ = "Skyrim.esm";
 			repositoryURL_ = "https://github.com/loot/skyrimse.git";
 		} else if (Type() == GameType::fo3) {
