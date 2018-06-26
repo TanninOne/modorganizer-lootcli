@@ -292,7 +292,7 @@ void LOOTWorker::getSettings(const fs::path& file) {
 		//Boost.Locale initialisation: Generate and imbue locales.
 		boost::locale::generator gen;
 		std::locale::global(gen(m_Language + ".UTF-8"));
-		loot::InitialiseLocale(m_Language + ".UTF-8");
+		InitialiseLocale(m_Language + ".UTF-8");
 		fs::path::imbue(std::locale());
 	}
 }
@@ -309,24 +309,24 @@ int LOOTWorker::run()
 	std::locale::global(gen("en.UTF-8"));
 	InitialiseLocale("en.UTF-8");
 	fs::path::imbue(std::locale());
-    SetLoggingCallback([&](loot::LogLevel level, const char * message) {
+    SetLoggingCallback([&](LogLevel level, const char * message) {
         switch (level) {
-            case loot::LogLevel::trace:
+            case LogLevel::trace:
 				progress();
                 break;
-            case loot::LogLevel::debug:
+            case LogLevel::debug:
 				progress();
                 break;
-            case loot::LogLevel::info:
+            case LogLevel::info:
                 progress();
                 break;
-            case loot::LogLevel::warning:
+            case LogLevel::warning:
                 BOOST_LOG_TRIVIAL(warning) << message;
                 break;
-            case loot::LogLevel::error:
+            case LogLevel::error:
                 BOOST_LOG_TRIVIAL(error) << message;
                 break;
-            case loot::LogLevel::fatal:
+            case LogLevel::fatal:
                 BOOST_LOG_TRIVIAL(fatal) << message;
                 break;
             default:
