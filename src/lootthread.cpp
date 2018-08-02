@@ -69,6 +69,7 @@ void LOOTWorker::setGame(const std::string &gameName)
 		("falloutnv", GameType::fonv)
 		("skyrim", GameType::tes5)
 		("skyrimse", GameType::tes5se);
+    ("skyrimvr", GameType::tes5vr);
 
 	auto iter = gameMap.find(ToLower(gameName));
 	if (iter != gameMap.end()) {
@@ -216,6 +217,9 @@ void LOOTWorker::getSettings(const fs::path& file) {
         else if (*type == GameSettings(GameType::tes5se).FolderName()) {
           newSettings = GameSettings(GameType::tes5se, *folder);
         }
+        else if (*type == GameSettings(GameType::tes5vr).FolderName()) {
+          newSettings = GameSettings(GameType::tes5vr, *folder);
+        }
         else if (*type == GameSettings(GameType::fo3).FolderName()) {
           newSettings = GameSettings(GameType::fo3, *folder);
         }
@@ -288,7 +292,7 @@ void LOOTWorker::getSettings(const fs::path& file) {
 		//Boost.Locale initialisation: Generate and imbue locales.
 		boost::locale::generator gen;
 		std::locale::global(gen(m_Language + ".UTF-8"));
-		loot::InitialiseLocale(m_Language + ".UTF-8");
+		InitialiseLocale(m_Language + ".UTF-8");
 		fs::path::imbue(std::locale());
 	}
 }
@@ -305,24 +309,24 @@ int LOOTWorker::run()
 	std::locale::global(gen("en.UTF-8"));
 	InitialiseLocale("en.UTF-8");
 	fs::path::imbue(std::locale());
-    SetLoggingCallback([&](loot::LogLevel level, const char * message) {
+    SetLoggingCallback([&](LogLevel level, const char * message) {
         switch (level) {
-            case loot::LogLevel::trace:
+            case LogLevel::trace:
 				progress();
                 break;
-            case loot::LogLevel::debug:
+            case LogLevel::debug:
 				progress();
                 break;
-            case loot::LogLevel::info:
+            case LogLevel::info:
                 progress();
                 break;
-            case loot::LogLevel::warning:
+            case LogLevel::warning:
                 BOOST_LOG_TRIVIAL(warning) << message;
                 break;
-            case loot::LogLevel::error:
+            case LogLevel::error:
                 BOOST_LOG_TRIVIAL(error) << message;
                 break;
-            case loot::LogLevel::fatal:
+            case LogLevel::fatal:
                 BOOST_LOG_TRIVIAL(fatal) << message;
                 break;
             default:
@@ -392,6 +396,7 @@ int LOOTWorker::run()
 		m_ProgressStep = "Sorting Plugins";
 		progress();
 
+    gameHandle->LoadCurrentLoadOrderState();
 		std::vector<std::string> sortedPlugins = gameHandle->SortPlugins(pluginsList);
 
 		m_ProgressStep = "Writing loadorder.txt";
