@@ -68,7 +68,7 @@ void LOOTWorker::setGame(const std::string &gameName)
 		("fallout4vr", GameType::fo4vr)
 		("falloutnv", GameType::fonv)
 		("skyrim", GameType::tes5)
-		("skyrimse", GameType::tes5se);
+		("skyrimse", GameType::tes5se)
     ("skyrimvr", GameType::tes5vr);
 
 	auto iter = gameMap.find(ToLower(gameName));
