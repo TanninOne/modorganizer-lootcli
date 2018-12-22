@@ -47,22 +47,22 @@ set(CPPTOML_INCLUDE_DIRS "${SOURCE_DIR}/include")
 
 math(EXPR BITS "8*${CMAKE_SIZEOF_VOID_P}")
 
-if(NOT DEFINED ENV{LOOT_API_PATH}) 
-set(LOOT_API_PATH "${DEPENDENCIES_DIR}/lootapi" CACHE PATH "path to loot api files")
+if(NOT DEFINED ENV{LOOT_PATH})
+set(LOOT_PATH "${DEPENDENCIES_DIR}/libloot" CACHE PATH "path to loot api files")
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/src
-		            ${LOOT_API_PATH}/include
+		            ${LOOT_PATH}/include
 		            ${CPPTOML_INCLUDE_DIRS})
 
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS}
-				 ${LOOT_API_PATH})
+				 ${LOOT_PATH})
 
 ADD_EXECUTABLE			(${PROJ_NAME} WIN32 ${${PROJ_NAME}_HDRS} ${${PROJ_NAME}_SRCS})
 add_dependencies		(${PROJ_NAME} cpptoml)
 TARGET_LINK_LIBRARIES	(${PROJ_NAME}
 						${Boost_LIBRARIES}
-						loot_api)
+						loot)
 
 IF (MSVC)
 	SET_TARGET_PROPERTIES(${PROJ_NAME} PROPERTIES COMPILE_FLAGS "/std:c++latest")

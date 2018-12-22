@@ -443,9 +443,12 @@ int LOOTWorker::run()
 				}
 			}
 
-			std::set<PluginCleaningData> dirtyInfo = db->GetPluginMetadata(sortedPlugins[i]).GetDirtyInfo();
-			for (const auto &element : dirtyInfo) {
-				report.add("dirty", formatDirty(element));
+			auto metaData = db->GetPluginMetadata(sortedPlugins[i]);
+			if (metaData) {
+				std::set<PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
+				for (const auto &element : dirtyInfo) {
+					report.add("dirty", formatDirty(element));
+				}
 			}
 		}
 
