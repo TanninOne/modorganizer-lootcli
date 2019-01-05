@@ -29,7 +29,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#pragma warning(push)
+#pragma warning(disable: 4003)
 #include <cpptoml.h>
+#pragma warning(pop)
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
