@@ -15,7 +15,6 @@
 #include <boost/log/expressions.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/console.hpp>
-#include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
 
 #include "lootthread.h"
 

@@ -18,11 +18,11 @@
 #include <sstream>
 #include <fstream>
 #include <memory>
+#include <filesystem>
 
 #include <boost/assign.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/format.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/locale.hpp>
 #include <game_settings.h>
@@ -39,7 +39,7 @@
 #include <Shlobj.h>
 
 using namespace loot;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 using boost::property_tree::ptree;
 using boost::property_tree::write_json;
@@ -235,8 +235,7 @@ void LOOTWorker::getSettings(const fs::path& file) {
         }
         else if (*type == GameSettings(GameType::fo4vr).FolderName()) {
           newSettings = GameSettings(GameType::fo4vr, *folder);
-        }
-        else
+        } else
           throw std::runtime_error(
             "invalid value for 'type' key in game settings table");
 
@@ -251,6 +250,11 @@ void LOOTWorker::getSettings(const fs::path& file) {
           if (master) {
             newSettings.SetMaster(*master);
           }
+
+		  auto minimumHeaderVersion = game->get_as<double>("minimumHeaderVersion");
+		  if (minimumHeaderVersion) {
+			newSettings.SetMinimumHeaderVersion((float)*minimumHeaderVersion);
+		  }
 
           auto repo = game->get_as<std::string>("repo");
           if (repo) {
@@ -270,8 +274,13 @@ void LOOTWorker::getSettings(const fs::path& file) {
 
           auto path = game->get_as<std::string>("path");
           if (path) {
-            newSettings.SetGamePath(*path);
+            newSettings.SetGamePath(u8path(*path));
           }
+
+		  auto localPath = game->get_as<std::string>("local_path");
+		  if (localPath) {
+			newSettings.SetGameLocalPath(u8path(*localPath));
+		  }
 
           auto registry = game->get_as<std::string>("registry");
           if (registry) {
@@ -297,7 +306,6 @@ void LOOTWorker::getSettings(const fs::path& file) {
 		boost::locale::generator gen;
 		std::locale::global(gen(m_Language + ".UTF-8"));
 		InitialiseLocale(m_Language + ".UTF-8");
-		fs::path::imbue(std::locale());
 	}
 }
 
@@ -312,7 +320,6 @@ int LOOTWorker::run()
 	//Boost.Locale initialisation: Generate and imbue locales.
 	std::locale::global(gen("en.UTF-8"));
 	InitialiseLocale("en.UTF-8");
-	fs::path::imbue(std::locale());
     SetLoggingCallback([&](LogLevel level, const char * message) {
         switch (level) {
             case LogLevel::trace:

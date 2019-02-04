@@ -5,7 +5,7 @@
 #include <string>
 #include <map>
 #include <mutex>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <game_settings.h>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -36,13 +36,13 @@ private:
 
   void progress(const std::string &step = "");
   void errorOccured(const std::string &message);
-  void getSettings(const boost::filesystem::path& file);
+  void getSettings(const std::filesystem::path& file);
 
-  boost::filesystem::path masterlistPath();
-  boost::filesystem::path settingsPath();
-  boost::filesystem::path userlistPath();
-  boost::filesystem::path l10nPath();
-  boost::filesystem::path dataPath();
+  std::filesystem::path masterlistPath();
+  std::filesystem::path settingsPath();
+  std::filesystem::path userlistPath();
+  std::filesystem::path l10nPath();
+  std::filesystem::path dataPath();
 
 private:
 
