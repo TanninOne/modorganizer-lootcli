@@ -1,69 +1,76 @@
 #include "game_settings.h"
 
-#include <boost/algorithm/string.hpp>
 #include <boost/locale.hpp>
-#include <boost/log/trivial.hpp>
-
-namespace fs = boost::filesystem;
 
 namespace loot {
 	const std::set<std::string> GameSettings::oldDefaultBranches({
 		"master",
 		"v0.7",
 		"v0.8",
-        "v0.10"
+        "v0.10",
+		"v0.13"
 	});
 
-	GameSettings::GameSettings() : type_(GameType::tes4) {}
+	GameSettings::GameSettings() : type_(GameType::tes4), minimumHeaderVersion_(0.0f) {}
 
-	GameSettings::GameSettings(const GameType gameCode, const std::string& folder) : type_(gameCode), repositoryBranch_("v0.13") {
+	GameSettings::GameSettings(const GameType gameCode, const std::string& folder) :
+		type_(gameCode),
+		repositoryBranch_("v0.14") {
 		if (Type() == GameType::tes4) {
 			name_ = "TES IV: Oblivion";
 			registryKey_ = "Software\\Bethesda Softworks\\Oblivion\\Installed Path";
 			lootFolderName_ = "Oblivion";
 			masterFile_ = "Oblivion.esm";
+			minimumHeaderVersion_ = 0.8f;
 			repositoryURL_ = "https://github.com/loot/oblivion.git";
 		} else if (Type() == GameType::tes5) {
 			name_ = "TES V: Skyrim";
 			registryKey_ = "Software\\Bethesda Softworks\\Skyrim\\Installed Path";
 			lootFolderName_ = "Skyrim";
 			masterFile_ = "Skyrim.esm";
+			minimumHeaderVersion_ = 0.94f;
 			repositoryURL_ = "https://github.com/loot/skyrim.git";
 		} else if (Type() == GameType::tes5se) {
 			name_ = "TES V: Skyrim Special Edition";
 			registryKey_ = "Software\\Bethesda Softworks\\Skyrim Special Edition\\Installed Path";
 			lootFolderName_ = "Skyrim Special Edition";
 			masterFile_ = "Skyrim.esm";
+			minimumHeaderVersion_ = 1.7f;
 			repositoryURL_ = "https://github.com/loot/skyrimse.git";
 		} else if (Type() == GameType::tes5vr) {
 			name_ = "TES V: Skyrim VR";
 			registryKey_ = "Software\\Bethesda Softworks\\Skyrim VR\\Installed Path";
 			lootFolderName_ = "Skyrim VR";
 			masterFile_ = "Skyrim.esm";
+			minimumHeaderVersion_ = 1.7f;
 			repositoryURL_ = "https://github.com/loot/skyrimse.git";
 		} else if (Type() == GameType::fo3) {
 			name_ = "Fallout 3";
 			registryKey_ = "Software\\Bethesda Softworks\\Fallout3\\Installed Path";
 			lootFolderName_ = "Fallout3";
 			masterFile_ = "Fallout3.esm";
+			minimumHeaderVersion_ = 0.94f;
 			repositoryURL_ = "https://github.com/loot/fallout3.git";
 		} else if (Type() == GameType::fonv) {
 			name_ = "Fallout: New Vegas";
 			registryKey_ = "Software\\Bethesda Softworks\\FalloutNV\\Installed Path";
 			lootFolderName_ = "FalloutNV";
 			masterFile_ = "FalloutNV.esm";
+			minimumHeaderVersion_ = 1.32f;
 			repositoryURL_ = "https://github.com/loot/falloutnv.git";
 		} else if (Type() == GameType::fo4) {
 			name_ = "Fallout 4";
 			registryKey_ = "Software\\Bethesda Softworks\\Fallout4\\Installed Path";
 			lootFolderName_ = "Fallout4";
 			masterFile_ = "Fallout4.esm";
+			minimumHeaderVersion_ = 0.95f;
 			repositoryURL_ = "https://github.com/loot/fallout4.git";
 		} else if (Type() == GameType::fo4vr) {
 			name_ = "Fallout 4 VR";
 			registryKey_ = "Software\\Bethesda Softworks\\Fallout 4 VR\\Installed Path";
 			lootFolderName_ = "Fallout4VR";
 			masterFile_ = "Fallout4.esm";
+			minimumHeaderVersion_ = 0.95f;
 			repositoryURL_ = "https://github.com/loot/fallout4.git";
 		}
 
@@ -76,7 +83,9 @@ namespace loot {
 	}
 
 	bool GameSettings::operator == (const GameSettings& rhs) const {
-		return (boost::iequals(name_, rhs.Name()) || boost::iequals(lootFolderName_, rhs.FolderName()));
+		using boost::locale::to_lower;
+		return to_lower(name_) == to_lower(rhs.Name()) ||
+			to_lower(lootFolderName_) == to_lower(rhs.FolderName());
 	}
 
 	GameType GameSettings::Type() const {
@@ -95,6 +104,10 @@ namespace loot {
 		return masterFile_;
 	}
 
+	float GameSettings::MinimumHeaderVersion() const {
+		return minimumHeaderVersion_;
+	}
+
 	std::string GameSettings::RegistryKey() const {
 		return registryKey_;
 	}
@@ -107,51 +120,50 @@ namespace loot {
 		return repositoryBranch_;
 	}
 
-	fs::path GameSettings::GamePath() const {
+	std::filesystem::path GameSettings::GamePath() const {
 		return gamePath_;
 	}
 
-	fs::path GameSettings::GameLocalPath() const {
+	std::filesystem::path GameSettings::GameLocalPath() const {
 		return gameLocalPath_;
 	}
 
 	GameSettings& GameSettings::SetName(const std::string& name) {
-		BOOST_LOG_TRIVIAL(trace) << "Setting \"" << name_ << "\" name to: " << name;
 		name_ = name;
 		return *this;
 	}
 
 	GameSettings& GameSettings::SetMaster(const std::string& masterFile) {
-		BOOST_LOG_TRIVIAL(trace) << "Setting \"" << name_ << "\" master file to: " << masterFile;
 		masterFile_ = masterFile;
 		return *this;
 	}
 
+	GameSettings& GameSettings::SetMinimumHeaderVersion(float minimumHeaderVersion) {
+		minimumHeaderVersion_ = minimumHeaderVersion;
+		return *this;
+	}
+
 	GameSettings& GameSettings::SetRegistryKey(const std::string& registry) {
-		BOOST_LOG_TRIVIAL(trace) << "Setting \"" << name_ << "\" registry key to: " << registry;
 		registryKey_ = registry;
 		return *this;
 	}
 
 	GameSettings& GameSettings::SetRepoURL(const std::string& repositoryURL) {
-		BOOST_LOG_TRIVIAL(trace) << "Setting \"" << name_ << "\" repo URL to: " << repositoryURL;
 		repositoryURL_ = repositoryURL;
 		return *this;
 	}
 
 	GameSettings& GameSettings::SetRepoBranch(const std::string& repositoryBranch) {
-		BOOST_LOG_TRIVIAL(trace) << "Setting \"" << name_ << "\" repo branch to: " << repositoryBranch;
 		repositoryBranch_ = repositoryBranch;
 		return *this;
 	}
 
-	GameSettings& GameSettings::SetGamePath(const boost::filesystem::path& path) {
-		BOOST_LOG_TRIVIAL(trace) << "Setting \"" << name_ << "\" game path to: " << path;
+	GameSettings& GameSettings::SetGamePath(const std::filesystem::path& path) {
 		gamePath_ = path;
 		return *this;
 	}
 
-	GameSettings& GameSettings::SetGameLocalPath(const boost::filesystem::path& path) {
+	GameSettings& GameSettings::SetGameLocalPath(const std::filesystem::path& path) {
 		gameLocalPath_ = path;
 		return *this;
 	}

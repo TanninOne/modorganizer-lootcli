@@ -15,7 +15,6 @@
 #include <boost/log/expressions.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/utility/setup/console.hpp>
-#include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
 
 #include "lootthread.h"
 
@@ -51,6 +50,8 @@ int WinMain(HINSTANCE hInstance,
 	LPTSTR    lpCmdLine,
 	int       nCmdShow)
 {
+  setlocale(LC_ALL, "en.UTF-8");
+
   boost::log::add_console_log(std::cout, boost::log::keywords::format = "%Message%");
   logging::core::get()->set_filter(
     logging::trivial::severity >= logging::trivial::info
@@ -65,7 +66,7 @@ int WinMain(HINSTANCE hInstance,
 	  for (int i = 0; i < argc; ++i)
 	  {
 		  size_t num_converted;
-		  std::vector<char> arg(wcslen(argv[i]) + 1);
+		  std::vector<char> arg(wcslen(argv[i]) * sizeof(wchar_t) + 1);
 
 		  wcstombs_s(&num_converted, &(arg[0]), arg.size(), argv[i], arg.size() - 1);
 
