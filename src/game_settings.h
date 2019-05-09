@@ -1,9 +1,10 @@
 #ifndef LOOT_GUI_STATE_GAME_SETTINGS
 #define LOOT_GUI_STATE_GAME_SETTINGS
 
+#include <filesystem>
+#include <optional>
 #include <set>
 #include <string>
-#include <filesystem>
 
 #include "loot/enum/game_type.h"
 
@@ -25,6 +26,7 @@ namespace loot {
 		std::string RegistryKey() const;
 		std::string RepoURL() const;
 		std::string RepoBranch() const;
+        std::string DataPath() const;
 		std::filesystem::path GamePath() const;
 		std::filesystem::path GameLocalPath() const;
 
@@ -47,7 +49,9 @@ namespace loot {
 
 		std::string registryKey_;
 
+		std::string pluginsFolderName_;
 		std::string lootFolderName_;
+
 		std::string repositoryURL_;
 		std::string repositoryBranch_;
 

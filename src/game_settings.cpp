@@ -2,23 +2,33 @@
 
 #include <boost/locale.hpp>
 
-namespace loot {
-	const std::set<std::string> GameSettings::oldDefaultBranches({
-		"master",
-		"v0.7",
-		"v0.8",
-        "v0.10",
-		"v0.13"
-	});
+using std::filesystem::exists;
+using std::filesystem::u8path;
 
-	GameSettings::GameSettings() : type_(GameType::tes4), minimumHeaderVersion_(0.0f) {}
+namespace loot {
+	const std::set<std::string> GameSettings::oldDefaultBranches(
+		{"master", "v0.7", "v0.8", "v0.10", "v0.13"}
+	);
+
+	GameSettings::GameSettings() :
+		type_(GameType::tes4),
+		minimumHeaderVersion_(0.0f) {}
 
 	GameSettings::GameSettings(const GameType gameCode, const std::string& folder) :
 		type_(gameCode),
 		repositoryBranch_("v0.14") {
-		if (Type() == GameType::tes4) {
+		if (Type() == GameType::tes3) {
+			name_ = "TES III: Morrowind";
+			registryKey_ = "Software\\Bethesda Softworks\\Morrowind\\Installed Path";
+			pluginsFolderName_ = "Data Files";
+			lootFolderName_ = "Morrowind";
+			masterFile_ = "Morrowind.esm";
+			minimumHeaderVersion_ = 1.2f;
+			repositoryURL_ = "https://github.com/loot/morrowind.git";
+		} else if (Type() == GameType::tes4) {
 			name_ = "TES IV: Oblivion";
 			registryKey_ = "Software\\Bethesda Softworks\\Oblivion\\Installed Path";
+			pluginsFolderName_ = "Data";
 			lootFolderName_ = "Oblivion";
 			masterFile_ = "Oblivion.esm";
 			minimumHeaderVersion_ = 0.8f;
@@ -26,6 +36,7 @@ namespace loot {
 		} else if (Type() == GameType::tes5) {
 			name_ = "TES V: Skyrim";
 			registryKey_ = "Software\\Bethesda Softworks\\Skyrim\\Installed Path";
+			pluginsFolderName_ = "Data";
 			lootFolderName_ = "Skyrim";
 			masterFile_ = "Skyrim.esm";
 			minimumHeaderVersion_ = 0.94f;
@@ -33,6 +44,7 @@ namespace loot {
 		} else if (Type() == GameType::tes5se) {
 			name_ = "TES V: Skyrim Special Edition";
 			registryKey_ = "Software\\Bethesda Softworks\\Skyrim Special Edition\\Installed Path";
+			pluginsFolderName_ = "Data";
 			lootFolderName_ = "Skyrim Special Edition";
 			masterFile_ = "Skyrim.esm";
 			minimumHeaderVersion_ = 1.7f;
@@ -40,6 +52,7 @@ namespace loot {
 		} else if (Type() == GameType::tes5vr) {
 			name_ = "TES V: Skyrim VR";
 			registryKey_ = "Software\\Bethesda Softworks\\Skyrim VR\\Installed Path";
+			pluginsFolderName_ = "Data";
 			lootFolderName_ = "Skyrim VR";
 			masterFile_ = "Skyrim.esm";
 			minimumHeaderVersion_ = 1.7f;
@@ -47,6 +60,7 @@ namespace loot {
 		} else if (Type() == GameType::fo3) {
 			name_ = "Fallout 3";
 			registryKey_ = "Software\\Bethesda Softworks\\Fallout3\\Installed Path";
+			pluginsFolderName_ = "Data";
 			lootFolderName_ = "Fallout3";
 			masterFile_ = "Fallout3.esm";
 			minimumHeaderVersion_ = 0.94f;
@@ -54,6 +68,7 @@ namespace loot {
 		} else if (Type() == GameType::fonv) {
 			name_ = "Fallout: New Vegas";
 			registryKey_ = "Software\\Bethesda Softworks\\FalloutNV\\Installed Path";
+			pluginsFolderName_ = "Data";
 			lootFolderName_ = "FalloutNV";
 			masterFile_ = "FalloutNV.esm";
 			minimumHeaderVersion_ = 1.32f;
@@ -61,6 +76,7 @@ namespace loot {
 		} else if (Type() == GameType::fo4) {
 			name_ = "Fallout 4";
 			registryKey_ = "Software\\Bethesda Softworks\\Fallout4\\Installed Path";
+			pluginsFolderName_ = "Data";
 			lootFolderName_ = "Fallout4";
 			masterFile_ = "Fallout4.esm";
 			minimumHeaderVersion_ = 0.95f;
@@ -68,6 +84,7 @@ namespace loot {
 		} else if (Type() == GameType::fo4vr) {
 			name_ = "Fallout 4 VR";
 			registryKey_ = "Software\\Bethesda Softworks\\Fallout 4 VR\\Installed Path";
+			pluginsFolderName_ = "Data";
 			lootFolderName_ = "Fallout4VR";
 			masterFile_ = "Fallout4.esm";
 			minimumHeaderVersion_ = 0.95f;
@@ -126,6 +143,10 @@ namespace loot {
 
 	std::filesystem::path GameSettings::GameLocalPath() const {
 		return gameLocalPath_;
+	}
+
+	std::string GameSettings::DataPath() const {
+		return pluginsFolderName_;
 	}
 
 	GameSettings& GameSettings::SetName(const std::string& name) {
