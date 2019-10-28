@@ -356,7 +356,7 @@ int LOOTWorker::run()
 
         fs::path profile(m_PluginListPath);
         profile = profile.parent_path();
-        auto gameHandle = CreateGameHandle(m_GameId, u8path(m_GamePath), u8path(profile.string()));
+        auto gameHandle = CreateGameHandle(m_GameId, m_GamePath, profile.string());
         auto db = gameHandle->GetDatabase();
 
         m_GameSettings = GameSettings(m_GameId);
@@ -376,8 +376,8 @@ int LOOTWorker::run()
             m_ProgressStep = "Updating Masterlist";
             progress();
 
-            mlUpdated = db->UpdateMasterlist(u8path(masterlistPath().string()), m_GameSettings.RepoURL(), m_GameSettings.RepoBranch());
-            if (mlUpdated && !db->IsLatestMasterlist(u8path(masterlistPath().string()), m_GameSettings.RepoBranch())) {
+            mlUpdated = db->UpdateMasterlist(masterlistPath().string(), m_GameSettings.RepoURL(), m_GameSettings.RepoBranch());
+            if (mlUpdated && !db->IsLatestMasterlist(masterlistPath().string(), m_GameSettings.RepoBranch())) {
                 errorOccured(boost::locale::translate("The latest masterlist revision contains a syntax error, LOOT is using the most recent valid revision instead. Syntax errors are usually minor and fixed within hours."));
             }
         }
@@ -386,7 +386,7 @@ int LOOTWorker::run()
 
         m_ProgressStep = "Loading Lists";
         progress();
-        db->LoadLists(u8path(masterlistPath().string()), fs::exists(userlist) ? u8path(userlistPath().string()) : "");
+        db->LoadLists(masterlistPath().string(), fs::exists(userlist) ? userlistPath().string() : "");
 
         m_ProgressStep = "Reading Plugins";
         progress();
@@ -408,7 +408,7 @@ int LOOTWorker::run()
 
         m_ProgressStep = "Writing loadorder.txt";
         progress();
-        std::ofstream outf(u8path(m_PluginListPath));
+        std::ofstream outf(m_PluginListPath);
         if (!outf) {
             errorOccured("failed to open " + m_PluginListPath + " to rewrite it");
             return 1;
@@ -457,7 +457,7 @@ int LOOTWorker::run()
         }
 
         std::ofstream buf;
-        buf.open(u8path(m_OutputPath).c_str());
+        buf.open(m_OutputPath.c_str());
         write_json(buf, report, false);
     }
     catch (const std::exception & e) {
