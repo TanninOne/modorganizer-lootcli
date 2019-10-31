@@ -45,7 +45,6 @@ using boost::property_tree::ptree;
 using boost::property_tree::write_json;
 using std::lock_guard;
 using std::recursive_mutex;
-using std::filesystem::u8path;
 
 
 LOOTWorker::LOOTWorker()
@@ -269,12 +268,12 @@ void LOOTWorker::getSettings(const fs::path& file) {
 
                     auto path = game->get_as<std::string>("path");
                     if (path) {
-                        newSettings.SetGamePath(u8path(*path));
+                        newSettings.SetGamePath(*path);
                     }
 
                     auto localPath = game->get_as<std::string>("local_path");
                     if (localPath) {
-                        newSettings.SetGameLocalPath(u8path(*localPath));
+                        newSettings.SetGameLocalPath(*localPath);
                     }
 
                     auto registry = game->get_as<std::string>("registry");
