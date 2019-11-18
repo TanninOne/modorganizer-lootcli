@@ -26,8 +26,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/locale.hpp>
 #include <game_settings.h>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
 
 #pragma warning(push)
 #pragma warning(disable: 4003)
@@ -41,8 +39,6 @@
 using namespace loot;
 namespace fs = std::filesystem;
 
-using boost::property_tree::ptree;
-using boost::property_tree::write_json;
 using std::lock_guard;
 using std::recursive_mutex;
 using std::filesystem::u8path;
@@ -305,6 +301,11 @@ void LOOTWorker::getSettings(const fs::path& file) {
     }
 }
 
+std::string escape(const std::string& s)
+{
+  return boost::replace_all_copy(s, "\"", "\\\"");
+}
+
 int LOOTWorker::run()
 {
     // Do some preliminary locale / UTF-8 support setup here, in case the settings file reading requires it.
@@ -419,46 +420,98 @@ int LOOTWorker::run()
         }
         outf.close();
 
-        ptree report;
 
-        m_ProgressStep = "Parsing LOOT Messages";
-        progress();
-        for (size_t i = 0; i < sortedPlugins.size(); ++i) {
-            report.add("name", sortedPlugins[i]);
+        // this builds the json manually because Qt was removed as a dependency
+        // and boost doesn't have anything for arbitrary json (property_tree
+        // doesn't support arrays)
+        //
+        // this can be cleaned up the day there's a json library in the
+        // dependencies
 
-            std::vector<Message> pluginMessages;
-            pluginMessages = db->GetGeneralMessages(true);
-
-            if (!pluginMessages.empty()) {
-                for (Message message : pluginMessages) {
-                    const char* type;
-                    if (message.GetType() == MessageType::say) {
-                        type = "info";
-                    } else if (message.GetType() == MessageType::warn) {
-                        type = "warn";
-                    } else if (message.GetType() == MessageType::error) {
-                        type = "error";
-                    } else {
-                        type = "unknown";
-                        errorOccured((boost::format("invalid message type %1%") % type).str());
-                    }
-                    report.add("messages.type", type);
-                    report.add("messages.message", message.ToSimpleMessage(m_Language).text);
-                }
-            }
-
-            auto metaData = db->GetPluginMetadata(sortedPlugins[i]);
-            if (metaData) {
-                std::set<PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
-                for (const auto& element : dirtyInfo) {
-                    report.add("dirty", formatDirty(element));
-                }
-            }
-        }
 
         std::ofstream buf;
         buf.open(u8path(m_OutputPath).c_str());
-        write_json(buf, report, false);
+
+        buf << "[\n";
+
+        m_ProgressStep = "Parsing LOOT Messages";
+        progress();
+
+        for (size_t i = 0; i < sortedPlugins.size(); ++i) {
+          if (i > 0) {
+            buf << ",\n";
+          }
+
+          buf << "{\n";
+
+          buf << "\t\"name\": \"" << escape(sortedPlugins[i]) << "\"";
+
+          std::vector<Message> pluginMessages;
+          pluginMessages = db->GetGeneralMessages(true);
+
+          if (!pluginMessages.empty()) {
+            buf
+              << ",\n\t\"messages\":\n"
+              << "\t[\n";
+
+            bool first = true;
+            for (Message message : pluginMessages) {
+              if (!first) {
+                buf << ",\n";
+              }
+
+              const char* type;
+              if (message.GetType() == MessageType::say) {
+                  type = "info";
+              } else if (message.GetType() == MessageType::warn) {
+                  type = "warn";
+              } else if (message.GetType() == MessageType::error) {
+                  type = "error";
+              } else {
+                  type = "unknown";
+                  errorOccured((boost::format("invalid message type %1%") % type).str());
+              }
+
+              buf
+                << "\t\t{\n"
+                << "\t\t\"type\": \"" << escape(type) << "\",\n"
+                << "\t\t\"message\": \"" << escape(message.ToSimpleMessage(m_Language).text) << "\"\n"
+                << "\t\t}";
+
+              first = false;
+            }
+
+            buf << "\n\t]";
+          }
+
+          auto metaData = db->GetPluginMetadata(sortedPlugins[i], true, true);
+          if (metaData) {
+            const std::set<PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
+
+            if (!dirtyInfo.empty()) {
+              buf
+                << ",\n"
+                << "\t\"dirty\":\n"
+                << "\t[\n";
+
+              bool first = true;
+              for (const auto& element : dirtyInfo) {
+                if (!first) {
+                  buf << ",\n";
+                }
+
+                buf << "\t\t\"" + escape(formatDirty(element)) + "\"\n";
+                first = false;
+              }
+
+              buf << "\n\t]";
+            }
+          }
+
+          buf << "}";
+        }
+
+        buf << "\n\t]";
     }
     catch (const std::exception & e) {
         errorOccured((boost::format("LOOT failed: %1%") % e.what()).str());
