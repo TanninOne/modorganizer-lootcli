@@ -7,6 +7,8 @@
 #include <vector>
 #include <windows.h>
 #include <stdio.h>
+#include <io.h>
+#include <fcntl.h>
 
 #include <boost/locale.hpp>
 #include <boost/lexical_cast.hpp>
@@ -50,6 +52,7 @@ int WinMain(HINSTANCE hInstance,
 	LPTSTR    lpCmdLine,
 	int       nCmdShow)
 {
+  _setmode(_fileno(stdout), _O_BINARY);
   setlocale(LC_ALL, "en.UTF-8");
 
   boost::log::add_console_log(std::cout, boost::log::keywords::format = "%Message%");
@@ -78,7 +81,7 @@ int WinMain(HINSTANCE hInstance,
   // out to be unnecessary atm.
 
   try {
-    LOOTWorker worker;
+    lootcli::LOOTWorker worker;
     worker.setUpdateMasterlist(!getParameter<bool>(arguments, "skipUpdateMasterlist"));
     worker.setGame(getParameter<std::string>(arguments, "game"));
     worker.setGamePath(getParameter<std::string>(arguments, "gamePath"));

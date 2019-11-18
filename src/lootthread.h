@@ -2,6 +2,7 @@
 #define LOOTTHREAD_H
 
 #include <loot/api.h>
+#include <lootcli/lootcli.h>
 #include <string>
 #include <map>
 #include <mutex>
@@ -14,6 +15,9 @@
 namespace loot {
   class Game;
 }
+
+
+namespace lootcli {
 
 class LOOTWorker
 {
@@ -33,9 +37,9 @@ public:
   int run();
 
 private:
+  void progress(Progress p);
+  void log(loot::LogLevel level, const std::string& message);
 
-  void progress(const std::string &step = "");
-  void errorOccured(const std::string &message);
   void getSettings(const std::filesystem::path& file);
 
   std::filesystem::path masterlistPath();
@@ -53,19 +57,19 @@ private:
   //template <typename T> T resolveFunction(HMODULE lib, const char *name);
 
 private:
-
   loot::GameType m_GameId;
   std::string m_Language;
   std::string m_GameName;
   std::string m_GamePath;
   std::string m_OutputPath;
   std::string m_PluginListPath;
-  std::string m_ProgressStep;
   bool m_UpdateMasterlist;
   //HMODULE m_Library;
 
   //std::map<std::string, FARPROC> m_ResolveLookup;
   mutable std::recursive_mutex mutex_;
 };
+
+} // namespace
 
 #endif // LOOTTHREAD_H

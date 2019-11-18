@@ -20,7 +20,8 @@ SET(${PROJ_NAME}_SRCS
 
 SET(${PROJ_NAME}_HDRS
   game_settings.h
-  lootthread.h)
+  lootthread.h
+  ../include/lootcli/lootcli.h)
 
 # Boost
 SET(Boost_USE_STATIC_LIBS        OFF)
@@ -52,8 +53,11 @@ set(LOOT_PATH "${DEPENDENCIES_DIR}/libloot" CACHE PATH "path to loot api files")
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR}/src
+				    ${CMAKE_SOURCE_DIR}/include
 		            ${LOOT_PATH}/include
-		            ${CPPTOML_INCLUDE_DIRS})
+		            ${CPPTOML_INCLUDE_DIRS}
+					${SPDLOG_ROOT}/include)
+
 
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS}
 				 ${LOOT_PATH})
