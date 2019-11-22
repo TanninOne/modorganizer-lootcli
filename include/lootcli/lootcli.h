@@ -1,9 +1,56 @@
-#include <spdlog/common.h>
+#ifndef MODORGANIZER_LOOTCLI_INCLUDED
+#define MODORGANIZER_LOOTCLI_INCLUDED
+
 #include <map>
 #include <regex>
 
 namespace lootcli
 {
+
+enum class LogLevels
+{
+  Trace = 0,
+  Debug,
+  Info,
+  Warning,
+  Error
+};
+
+
+inline LogLevels logLevelFromString(const std::string& s)
+{
+  if (s == "trace") {
+    return LogLevels::Trace;
+  } else if (s == "debug") {
+    return LogLevels::Debug;
+  }
+  else if (s == "info") {
+    return LogLevels::Info;
+  }
+  else if (s == "warning") {
+    return LogLevels::Warning;
+  }
+  else if (s == "error") {
+    return LogLevels::Error;
+  }
+  else {
+    return LogLevels::Info;
+  }
+}
+
+inline std::string logLevelToString(LogLevels level)
+{
+  switch (level)
+  {
+    case LogLevels::Trace:   return "trace";
+    case LogLevels::Debug:   return "debug";
+    case LogLevels::Info:    return "info";
+    case LogLevels::Warning: return "warning";
+    case LogLevels::Error:   return "error";
+    default:                 return "info";
+  }
+}
+
 
 enum class Progress
 {
@@ -29,15 +76,15 @@ struct Message
 {
   MessageType type = MessageType::None;
   Progress progress = Progress::None;
-  spdlog::level::level_enum logLevel = spdlog::level::trace;
+  LogLevels logLevel = LogLevels::Info;
   std::string log;
 
   static Message fromProgress(Progress p)
   {
-    return {MessageType::Progress, p, spdlog::level::trace, ""};
+    return {MessageType::Progress, p, LogLevels::Info, ""};
   }
 
-  static Message fromLog(spdlog::level::level_enum level, std::string log)
+  static Message fromLog(LogLevels level, std::string log)
   {
     return {MessageType::Log, Progress::None, level, std::move(log)};
   }
@@ -63,13 +110,10 @@ inline Message parseMessage(const std::string_view& line)
       return {};
     }
   } else {
-    const auto level = spdlog::level::from_str(type);
-    if (level == spdlog::level::off) {
-      return {};
-    }
-
-    return Message::fromLog(level, m[2]);
+    return Message::fromLog(logLevelFromString(type), m[2]);
   }
 }
 
 } // namespace
+
+#endif // MODORGANIZER_LOOTCLI_INCLUDED

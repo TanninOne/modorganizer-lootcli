@@ -60,6 +60,7 @@ LOOTWorker::LOOTWorker()
     : m_GameId(loot::GameType::tes5)
     , m_Language(loot::MessageContent::defaultLanguage)
     , m_GameName("Skyrim")
+    , m_LogLevel(loot::LogLevel::info)
 {
 }
 
@@ -113,25 +114,21 @@ void LOOTWorker::setUpdateMasterlist(bool update)
 {
     m_UpdateMasterlist = update;
 }
-void LOOTWorker::setPluginListPath(const std::string& pluginListPath) {
+
+void LOOTWorker::setPluginListPath(const std::string& pluginListPath)
+{
     m_PluginListPath = pluginListPath;
 }
 
-void LOOTWorker::setLanguageCode(const std::string& languageCode) {
+void LOOTWorker::setLanguageCode(const std::string& languageCode)
+{
     m_Language = languageCode;
 }
 
-/*void LOOTWorker::handleErr(unsigned int resultCode, const char *description)
+void LOOTWorker::setLogLevel(loot::LogLevel level)
 {
-if (resultCode != LVAR(loot_ok)) {
-const char *errMessage;
-unsigned int lastError = LFUNC(loot_get_error_message)(&errMessage);
-throw std::runtime_error((boost::format("%1% failed: %2% (code %3%)") % description % errMessage % lastError).str());
-} else {
-progress(description);
+  m_LogLevel = level;
 }
-}*/
-
 
 fs::path GetLOOTAppData() {
     TCHAR path[MAX_PATH];
@@ -471,7 +468,10 @@ int LOOTWorker::run()
                   type = "error";
               } else {
                   type = "unknown";
-                  log(loot::LogLevel::error, fmt::format("invalid message type {}", type));
+
+                  log(
+                    loot::LogLevel::error,
+                    "invalid message type " + std::to_string(static_cast<int>(message.GetType())));
               }
 
               buf
@@ -516,7 +516,7 @@ int LOOTWorker::run()
         buf << "\n\t]";
     }
     catch (const std::exception & e) {
-        log(loot::LogLevel::error, fmt::format("LOOT failed: {}", e.what()));
+        log(loot::LogLevel::error, std::string("LOOT failed: ") + e.what());
         return 1;
     }
 
@@ -531,22 +531,6 @@ void LOOTWorker::progress(Progress p)
   std::cout.flush();
 }
 
-spdlog::level::level_enum toSpdlog(loot::LogLevel level)
-{
-  using loot::LogLevel;
-
-  switch (level)
-  {
-    case LogLevel::trace:   return spdlog::level::trace;
-    case LogLevel::debug:   return spdlog::level::debug;
-    case LogLevel::info:    return spdlog::level::info;
-    case LogLevel::warning: return spdlog::level::warn;
-    case LogLevel::error:   return spdlog::level::err;
-    case LogLevel::fatal:   return spdlog::level::critical;
-    default:                return spdlog::level::trace;
-  }
-}
-
 std::string escapeNewlines(const std::string& s)
 {
   auto ss = boost::replace_all_copy(s, "\n", "\\n");
@@ -556,18 +540,60 @@ std::string escapeNewlines(const std::string& s)
 
 void LOOTWorker::log(loot::LogLevel level, const std::string& message)
 {
-  const auto ll = static_cast<std::size_t>(toSpdlog(level));
-  if (ll >= std::extent_v<decltype(spdlog::level::level_string_views)>) {
+  if (level < m_LogLevel) {
     return;
   }
 
-  const auto levelName = spdlog::level::level_string_views[ll];
+  const auto ll = fromLootLogLevel(level);
+  const auto levelName = logLevelToString(ll);
 
-  std::cout
-    << "[" << std::string(levelName.begin(), levelName.end()) << "] "
-    << escapeNewlines(message) << "\n";
-
+  std::cout << "[" << levelName << "] " << escapeNewlines(message) << "\n";
   std::cout.flush();
+}
+
+
+loot::LogLevel toLootLogLevel(lootcli::LogLevels level)
+{
+  using L = loot::LogLevel;
+  using LC = lootcli::LogLevels;
+
+  switch (level)
+  {
+    case LC::Trace:   return L::trace;
+    case LC::Debug:   return L::debug;
+    case LC::Info:    return L::info;
+    case LC::Warning: return L::warning;
+    case LC::Error:   return L::error;
+    default:          return L::info;
+  }
+}
+
+lootcli::LogLevels fromLootLogLevel(loot::LogLevel level)
+{
+  using L = loot::LogLevel;
+  using LC = lootcli::LogLevels;
+
+  switch (level)
+  {
+    case L::trace:
+      return LC::Trace;
+
+    case L::debug:
+      return LC::Debug;
+
+    case L::info:
+      return LC::Info;
+
+    case L::warning:
+      return LC::Warning;
+
+    case L::error:  // fall-through
+    case L::fatal:
+      return LC::Error;
+
+    default:
+      return LC::Info;
+  }
 }
 
 } // namespace

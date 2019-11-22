@@ -55,8 +55,7 @@ endif()
 include_directories(${CMAKE_SOURCE_DIR}/src
 				    ${CMAKE_SOURCE_DIR}/include
 		            ${LOOT_PATH}/include
-		            ${CPPTOML_INCLUDE_DIRS}
-					${SPDLOG_ROOT}/include)
+		            ${CPPTOML_INCLUDE_DIRS})
 
 
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS}

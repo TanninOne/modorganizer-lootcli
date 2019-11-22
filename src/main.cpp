@@ -19,6 +19,7 @@
 #include <boost/log/utility/setup/console.hpp>
 
 #include "lootthread.h"
+#include "lootcli/lootcli.h"
 
 using namespace std;
 namespace logging = boost::log;
@@ -45,6 +46,27 @@ bool getParameter<bool>(const std::vector<std::string> &arguments, const std::st
   } else {
     return false;
   }
+}
+
+template <typename T>
+T getOptionalParameter(const std::vector<std::string> &arguments, const std::string &key, T def)
+{
+  try
+  {
+    return getParameter<T>(arguments, key);
+  }
+  catch(std::runtime_error&)
+  {
+    return def;
+  }
+}
+
+loot::LogLevel getLogLevel(const std::vector<std::string>& arguments)
+{
+  const auto s = getOptionalParameter<std::string>(arguments, "logLevel", "");
+  const auto level = lootcli::logLevelFromString(s);
+
+  return lootcli::toLootLogLevel(level);
 }
 
 int WinMain(HINSTANCE hInstance,
@@ -82,11 +104,14 @@ int WinMain(HINSTANCE hInstance,
 
   try {
     lootcli::LOOTWorker worker;
+
     worker.setUpdateMasterlist(!getParameter<bool>(arguments, "skipUpdateMasterlist"));
     worker.setGame(getParameter<std::string>(arguments, "game"));
     worker.setGamePath(getParameter<std::string>(arguments, "gamePath"));
     worker.setPluginListPath(getParameter<std::string>(arguments, "pluginListPath"));
     worker.setOutput(getParameter<std::string>(arguments, "out"));
+    worker.setLogLevel(getLogLevel(arguments));
+
     return worker.run();
   } catch (const std::exception &e) {
     BOOST_LOG_TRIVIAL(error) << "Error: " << e.what();

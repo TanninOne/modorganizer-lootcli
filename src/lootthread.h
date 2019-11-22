@@ -19,6 +19,9 @@ namespace loot {
 
 namespace lootcli {
 
+loot::LogLevel toLootLogLevel(lootcli::LogLevels level);
+lootcli::LogLevels fromLootLogLevel(loot::LogLevel level);
+
 class LOOTWorker
 {
 public:
@@ -29,6 +32,7 @@ public:
   void setOutput(const std::string &outputPath);
   void setPluginListPath(const std::string &pluginListPath);
   void setLanguageCode(const std::string &language_code); //Will add this when I figure out how languages work on MO
+  void setLogLevel(loot::LogLevel level);
 
   void setUpdateMasterlist(bool update);
   std::string formatDirty(const loot::PluginCleaningData &cleaningData);
@@ -63,6 +67,7 @@ private:
   std::string m_GamePath;
   std::string m_OutputPath;
   std::string m_PluginListPath;
+  loot::LogLevel m_LogLevel;
   bool m_UpdateMasterlist;
   //HMODULE m_Library;
 
