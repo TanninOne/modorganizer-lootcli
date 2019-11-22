@@ -434,86 +434,101 @@ int LOOTWorker::run()
         std::ofstream buf;
         buf.open(utf8_path(m_OutputPath).c_str());
 
-        buf << "[\n";
+        buf << "{\n";
+
+        std::vector<loot::Message> pluginMessages = db->GetGeneralMessages(true);
+
+        if (!pluginMessages.empty()) {
+          buf
+            << "\t\"messages\":\n"
+            << "\t[\n";
+
+          bool first = true;
+          for (loot::Message message : pluginMessages) {
+            if (!first) {
+              buf << ",\n";
+            }
+
+            const char* type;
+            if (message.GetType() == loot::MessageType::say) {
+                type = "info";
+            } else if (message.GetType() == loot::MessageType::warn) {
+                type = "warn";
+            } else if (message.GetType() == loot::MessageType::error) {
+                type = "error";
+            } else {
+                type = "unknown";
+
+                log(
+                  loot::LogLevel::error,
+                  "invalid message type " + std::to_string(static_cast<int>(message.GetType())));
+            }
+
+            buf
+              << "\t\t{\n"
+              << "\t\t\t\"type\": \"" << escape(type) << "\",\n"
+              << "\t\t\t\"message\": \"" << escape(message.ToSimpleMessage(m_Language).text) << "\"\n"
+              << "\t\t}";
+
+            first = false;
+          }
+
+          buf << "\n\t]";
+        }
+
+        bool first = true;
 
         for (size_t i = 0; i < sortedPlugins.size(); ++i) {
-          if (i > 0) {
+          auto metaData = db->GetPluginMetadata(sortedPlugins[i], true, true);
+          if (!metaData) {
+            continue;
+          }
+
+          const std::set<loot::PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
+          if (dirtyInfo.empty()) {
+            continue;
+          }
+
+          if (first) {
+            if (!pluginMessages.empty()) {
+              buf << ",\n";
+            }
+
+            buf
+              << "\t\"plugins\":\n"
+              << "\t[\n";
+          } else if (!first) {
             buf << ",\n";
           }
 
-          buf << "{\n";
+          first = false;
 
-          buf << "\t\"name\": \"" << escape(sortedPlugins[i]) << "\"";
+          buf
+            << "\t\t{\n"
+            << "\t\t\t\"name\": \"" << escape(sortedPlugins[i]) << "\",\n"
+            << "\t\t\t\"dirty\":\n"
+            << "\t\t\t[\n";
 
-          std::vector<loot::Message> pluginMessages;
-          pluginMessages = db->GetGeneralMessages(true);
-
-          if (!pluginMessages.empty()) {
-            buf
-              << ",\n\t\"messages\":\n"
-              << "\t[\n";
-
-            bool first = true;
-            for (loot::Message message : pluginMessages) {
-              if (!first) {
-                buf << ",\n";
-              }
-
-              const char* type;
-              if (message.GetType() == loot::MessageType::say) {
-                  type = "info";
-              } else if (message.GetType() == loot::MessageType::warn) {
-                  type = "warn";
-              } else if (message.GetType() == loot::MessageType::error) {
-                  type = "error";
-              } else {
-                  type = "unknown";
-
-                  log(
-                    loot::LogLevel::error,
-                    "invalid message type " + std::to_string(static_cast<int>(message.GetType())));
-              }
-
-              buf
-                << "\t\t{\n"
-                << "\t\t\"type\": \"" << escape(type) << "\",\n"
-                << "\t\t\"message\": \"" << escape(message.ToSimpleMessage(m_Language).text) << "\"\n"
-                << "\t\t}";
-
-              first = false;
+          bool firstDirty = true;
+          for (const auto& element : dirtyInfo) {
+            if (!firstDirty) {
+              buf << ",\n";
             }
 
-            buf << "\n\t]";
+            buf << "\t\t\t\t\"" + escape(formatDirty(element)) + "\"\n";
+            firstDirty = false;
           }
 
-          auto metaData = db->GetPluginMetadata(sortedPlugins[i], true, true);
-          if (metaData) {
-            const std::set<loot::PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
-
-            if (!dirtyInfo.empty()) {
-              buf
-                << ",\n"
-                << "\t\"dirty\":\n"
-                << "\t[\n";
-
-              bool first = true;
-              for (const auto& element : dirtyInfo) {
-                if (!first) {
-                  buf << ",\n";
-                }
-
-                buf << "\t\t\"" + escape(formatDirty(element)) + "\"\n";
-                first = false;
-              }
-
-              buf << "\n\t]";
-            }
-          }
-
-          buf << "}";
+          buf
+            << "\n\t\t\t]\n"
+            << "\t\t}";
         }
 
-        buf << "\n\t]";
+        if (!first) {
+          buf << "\n\t]";
+        }
+
+        buf << "\n}";
     }
     catch (const std::exception & e) {
         log(loot::LogLevel::error, std::string("LOOT failed: ") + e.what());
