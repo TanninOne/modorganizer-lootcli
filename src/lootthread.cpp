@@ -1,38 +1,5 @@
 #include "lootthread.h"
-
-#pragma warning (push, 0)
-#include <loot/api.h>
-#pragma warning (pop)
-
-#include <thread>
-#include <mutex>
-#include <ctype.h>
-#include <map>
-#include <exception>
-#include <stdio.h>
-#include <stddef.h>
-#include <algorithm>
-#include <stdexcept>
-#include <utility>
-#include <sstream>
-#include <fstream>
-#include <memory>
-#include <filesystem>
-
-#include <boost/assign.hpp>
-#include <boost/format.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/locale.hpp>
-#include <game_settings.h>
-
-#pragma warning(push)
-#pragma warning(disable: 4003)
-#include <cpptoml.h>
-#pragma warning(pop)
-
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <Shlobj.h>
+#include "game_settings.h"
 
 //using namespace loot;
 namespace fs = std::filesystem;
@@ -64,11 +31,13 @@ LOOTWorker::LOOTWorker()
 {
 }
 
-std::string ToLower(const std::string& text)
+std::string ToLower(std::string text)
 {
-    std::string result = text;
-    std::transform(text.begin(), text.end(), result.begin(), tolower);
-    return result;
+    std::transform(
+      text.begin(), text.end(), text.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    return text;
 }
 
 
@@ -96,7 +65,7 @@ void LOOTWorker::setGame(const std::string& gameName)
         m_GameId = iter->second;
     }
     else {
-        throw std::runtime_error((boost::format("invalid game name \"%1%\"") % gameName).str());
+        throw std::runtime_error("invalid game name \"" + gameName + "\"");
     }
 }
 

@@ -1,16 +1,8 @@
 #ifndef LOOTTHREAD_H
 #define LOOTTHREAD_H
 
-#include <loot/api.h>
 #include <lootcli/lootcli.h>
-#include <string>
-#include <map>
-#include <mutex>
-#include <filesystem>
-#include <game_settings.h>
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-
+#include "game_settings.h"
 
 namespace loot {
   class Game;

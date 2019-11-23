@@ -1,9 +1,6 @@
 #ifndef MODORGANIZER_LOOTCLI_INCLUDED
 #define MODORGANIZER_LOOTCLI_INCLUDED
 
-#include <map>
-#include <regex>
-
 namespace lootcli
 {
 
