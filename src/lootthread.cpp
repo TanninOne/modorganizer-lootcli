@@ -133,7 +133,7 @@ fs::path LOOTWorker::dataPath()
     return fs::path(m_GamePath) / m_GameSettings.DataPath();
 }
 
-std::string LOOTWorker::formatDirty(const loot::PluginCleaningData& cleaningData) {
+std::string LOOTWorker::formatDirty(const loot::PluginCleaningData& cleaningData) const {
 
     const std::string itmRecords = std::to_string(cleaningData.GetITMCount()) + " ITM record(s)";
     const std::string deletedReferences = std::to_string(cleaningData.GetDeletedReferenceCount()) + " deleted reference(s)";
@@ -389,115 +389,8 @@ int LOOTWorker::run()
         }
         outf.close();
 
-
         progress(Progress::ParsingLootMessages);
-
-        // this builds the json manually because Qt was removed as a dependency
-        // and boost doesn't have anything for arbitrary json (property_tree
-        // doesn't support arrays)
-        //
-        // this can be cleaned up the day there's a json library in the
-        // dependencies
-
-
-        std::ofstream buf;
-        buf.open(utf8_path(m_OutputPath).c_str());
-
-        buf << "{\n";
-
-        std::vector<loot::Message> pluginMessages = db->GetGeneralMessages(true);
-
-        if (!pluginMessages.empty()) {
-          buf
-            << "\t\"messages\":\n"
-            << "\t[\n";
-
-          bool first = true;
-          for (loot::Message message : pluginMessages) {
-            if (!first) {
-              buf << ",\n";
-            }
-
-            const char* type;
-            if (message.GetType() == loot::MessageType::say) {
-                type = "info";
-            } else if (message.GetType() == loot::MessageType::warn) {
-                type = "warn";
-            } else if (message.GetType() == loot::MessageType::error) {
-                type = "error";
-            } else {
-                type = "unknown";
-
-                log(
-                  loot::LogLevel::error,
-                  "invalid message type " + std::to_string(static_cast<int>(message.GetType())));
-            }
-
-            buf
-              << "\t\t{\n"
-              << "\t\t\t\"type\": \"" << escape(type) << "\",\n"
-              << "\t\t\t\"message\": \"" << escape(message.ToSimpleMessage(m_Language).text) << "\"\n"
-              << "\t\t}";
-
-            first = false;
-          }
-
-          buf << "\n\t]";
-        }
-
-        bool first = true;
-
-        for (size_t i = 0; i < sortedPlugins.size(); ++i) {
-          auto metaData = db->GetPluginMetadata(sortedPlugins[i], true, true);
-          if (!metaData) {
-            continue;
-          }
-
-          const std::set<loot::PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
-          if (dirtyInfo.empty()) {
-            continue;
-          }
-
-          if (first) {
-            if (!pluginMessages.empty()) {
-              buf << ",\n";
-            }
-
-            buf
-              << "\t\"plugins\":\n"
-              << "\t[\n";
-          } else if (!first) {
-            buf << ",\n";
-          }
-
-          first = false;
-
-          buf
-            << "\t\t{\n"
-            << "\t\t\t\"name\": \"" << escape(sortedPlugins[i]) << "\",\n"
-            << "\t\t\t\"dirty\":\n"
-            << "\t\t\t[\n";
-
-          bool firstDirty = true;
-          for (const auto& element : dirtyInfo) {
-            if (!firstDirty) {
-              buf << ",\n";
-            }
-
-            buf << "\t\t\t\t\"" + escape(formatDirty(element)) + "\"\n";
-            firstDirty = false;
-          }
-
-          buf
-            << "\n\t\t\t]\n"
-            << "\t\t}";
-        }
-
-        if (!first) {
-          buf << "\n\t]";
-        }
-
-        buf << "\n}";
+        std::ofstream(utf8_path(m_OutputPath)) << createJsonReport(*db, sortedPlugins);
     }
     catch (const std::exception & e) {
         log(loot::LogLevel::error, std::string("LOOT failed: ") + e.what());
@@ -507,6 +400,87 @@ int LOOTWorker::run()
     progress(Progress::Done);
 
     return 0;
+}
+
+std::string LOOTWorker::createJsonReport(
+  loot::DatabaseInterface& db, const std::vector<std::string>& sortedPlugins) const
+{
+  QJsonObject root;
+
+  root["messages"] = createMessages(db);
+  root["plugins"] = createPlugins(db, sortedPlugins);
+
+  QJsonDocument doc(root);
+  return doc.toJson(QJsonDocument::Indented).toStdString();
+}
+
+QJsonArray LOOTWorker::createMessages(loot::DatabaseInterface& db) const
+{
+  QJsonArray messages;
+
+  for (loot::Message m : db.GetGeneralMessages(true)) {
+    QString type;
+
+    switch (m.GetType())
+    {
+      case loot::MessageType::say:
+        type = "info";
+        break;
+
+      case loot::MessageType::warn:
+        type = "warn";
+        break;
+
+      case loot::MessageType::error:
+        type = "error";
+        break;
+
+      default:
+        type = "unknown";
+        break;
+    }
+
+    messages.push_back(QJsonObject{
+      {"type", type},
+      {"message", QString::fromStdString(m.ToSimpleMessage(m_Language).text)}
+    });
+  }
+
+  return messages;
+}
+
+QJsonArray LOOTWorker::createPlugins(
+  loot::DatabaseInterface& db,
+  const std::vector<std::string>& sortedPlugins) const
+{
+  QJsonArray plugins;
+
+  for (size_t i = 0; i < sortedPlugins.size(); ++i) {
+    auto metaData = db.GetPluginMetadata(sortedPlugins[i], true, true);
+    if (!metaData) {
+      continue;
+    }
+
+    const std::set<loot::PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
+    if (dirtyInfo.empty()) {
+      continue;
+    }
+
+    QJsonObject o;
+    o["name"] = QString::fromStdString(sortedPlugins[i]);
+
+    QJsonArray dirtyArray;
+
+    for (const auto& d : dirtyInfo) {
+      dirtyArray.push_back(QString::fromStdString(formatDirty(d)));
+    }
+
+    o["dirty"] = dirtyArray;
+
+    plugins.push_back(o);
+  }
+
+  return plugins;
 }
 
 void LOOTWorker::progress(Progress p)
@@ -522,7 +496,7 @@ std::string escapeNewlines(const std::string& s)
   return ss;
 }
 
-void LOOTWorker::log(loot::LogLevel level, const std::string& message)
+void LOOTWorker::log(loot::LogLevel level, const std::string& message) const
 {
   if (level < m_LogLevel) {
     return;

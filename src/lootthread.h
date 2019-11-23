@@ -27,14 +27,14 @@ public:
   void setLogLevel(loot::LogLevel level);
 
   void setUpdateMasterlist(bool update);
-  std::string formatDirty(const loot::PluginCleaningData &cleaningData);
+  std::string formatDirty(const loot::PluginCleaningData &cleaningData) const;
   loot::GameSettings m_GameSettings;
 
   int run();
 
 private:
   void progress(Progress p);
-  void log(loot::LogLevel level, const std::string& message);
+  void log(loot::LogLevel level, const std::string& message) const;
 
   void getSettings(const std::filesystem::path& file);
 
@@ -61,10 +61,17 @@ private:
   std::string m_PluginListPath;
   loot::LogLevel m_LogLevel;
   bool m_UpdateMasterlist;
-  //HMODULE m_Library;
-
-  //std::map<std::string, FARPROC> m_ResolveLookup;
   mutable std::recursive_mutex mutex_;
+
+  std::string createJsonReport(
+    loot::DatabaseInterface& db,
+    const std::vector<std::string>& sortedPlugins) const;
+
+  QJsonArray createMessages(loot::DatabaseInterface& db) const;
+
+  QJsonArray createPlugins(
+    loot::DatabaseInterface& db,
+    const std::vector<std::string>& sortedPlugins) const;
 };
 
 } // namespace
