@@ -41,6 +41,7 @@ SET(${PROJ_NAME}_SRCS
 SET(${PROJ_NAME}_HDRS
   game_settings.h
   lootthread.h
+  version.h
   ../include/lootcli/lootcli.h)
 
 SET(${PROJ_NAME}_RCS
