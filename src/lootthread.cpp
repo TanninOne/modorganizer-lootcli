@@ -479,7 +479,7 @@ QJsonValue LOOTWorker::createMessages(const std::vector<loot::Message>& list) co
   for (loot::Message m : list) {
     messages.push_back(QJsonObject{
       {"type", QString::fromStdString(toString(m.GetType()))},
-      {"message", QString::fromStdString(m.ToSimpleMessage(m_Language).text)}
+      {"text", QString::fromStdString(m.ToSimpleMessage(m_Language).text)}
     });
   }
 
@@ -500,7 +500,7 @@ QJsonValue LOOTWorker::createDirty(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::warn, d.GetInfo()).ToSimpleMessage(m_Language).text));
+    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetInfo()).ToSimpleMessage(m_Language).text));
 
     array.push_back(o);
   }
@@ -519,7 +519,7 @@ QJsonValue LOOTWorker::createClean(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::warn, d.GetInfo()).ToSimpleMessage(m_Language).text));
+    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetInfo()).ToSimpleMessage(m_Language).text));
 
     array.push_back(o);
   }
@@ -533,10 +533,18 @@ QJsonValue LOOTWorker::createFiles(const std::set<loot::File>& data) const
   QJsonArray array;
 
   for (auto&& f : data) {
-    array.push_back(QJsonObject{
-      {"name", QString::fromStdString(f.GetName())},
-      {"displayName", QString::fromStdString(f.GetDisplayName())}
-    });
+    const auto n = QString::fromStdString(f.GetName());
+    const auto dn = QString::fromStdString(f.GetDisplayName());
+
+    QJsonObject o{
+      {"name", n}
+    };
+
+    if (dn != n) {
+      set(o, "displayName", dn);
+    }
+
+    array.push_back(std::move(o));
   }
 
   return array;
