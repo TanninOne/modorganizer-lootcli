@@ -43,8 +43,12 @@ SET(${PROJ_NAME}_HDRS
   lootthread.h
   ../include/lootcli/lootcli.h)
 
+SET(${PROJ_NAME}_RCS
+    version.rc)
+
 source_group(src REGULAR_EXPRESSION ".*\\.(h|cpp|ui)")
 source_group(cmake FILES CMakeLists.txt)
+source_group(resources FILES ${${PROJ_NAME}_RCS})
 
 add_msvc_precompiled_header("pch.h" "pch.cpp" ${PROJ_NAME}_SRCS ${PROJ_NAME}_HDRS)
 
@@ -88,7 +92,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src
 LINK_DIRECTORIES(${Boost_LIBRARY_DIRS}
 				 ${LOOT_PATH})
 
-ADD_EXECUTABLE			(${PROJ_NAME} WIN32 ${${PROJ_NAME}_HDRS} ${${PROJ_NAME}_SRCS})
+ADD_EXECUTABLE			(${PROJ_NAME} WIN32 ${${PROJ_NAME}_HDRS} ${${PROJ_NAME}_SRCS} ${${PROJ_NAME}_RCS})
 add_dependencies		(${PROJ_NAME} cpptoml)
 TARGET_LINK_LIBRARIES	(${PROJ_NAME}
 						${Boost_LIBRARIES} Qt5::Widgets
