@@ -27,8 +27,6 @@ public:
   void setLogLevel(loot::LogLevel level);
 
   void setUpdateMasterlist(bool update);
-  std::string formatDirty(const loot::PluginCleaningData &cleaningData) const;
-  loot::GameSettings m_GameSettings;
 
   int run();
 
@@ -62,16 +60,21 @@ private:
   loot::LogLevel m_LogLevel;
   bool m_UpdateMasterlist;
   mutable std::recursive_mutex mutex_;
+  loot::GameSettings m_GameSettings;
 
   std::string createJsonReport(
-    loot::DatabaseInterface& db,
+    loot::GameInterface& game,
     const std::vector<std::string>& sortedPlugins) const;
-
-  QJsonArray createMessages(loot::DatabaseInterface& db) const;
 
   QJsonArray createPlugins(
-    loot::DatabaseInterface& db,
+    loot::GameInterface& game,
     const std::vector<std::string>& sortedPlugins) const;
+
+  QJsonValue createMessages(const std::vector<loot::Message>& list) const;
+  QJsonValue createDirty(const std::set<loot::PluginCleaningData>& data) const;
+  QJsonValue createClean(const std::set<loot::PluginCleaningData>& data) const;
+  QJsonValue createFiles(const std::set<loot::File>& data) const;
+  QJsonValue createMissingMasters(loot::GameInterface& game, const std::string& pluginName) const;
 };
 
 } // namespace

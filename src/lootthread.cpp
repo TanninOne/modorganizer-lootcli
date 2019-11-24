@@ -1,5 +1,6 @@
 #include "lootthread.h"
 #include "game_settings.h"
+#include "version.h"
 
 //using namespace loot;
 namespace fs = std::filesystem;
@@ -20,6 +21,17 @@ fs::path utf8_path(const std::string& s)
   }
 
   return u8s;
+}
+
+std::string toString(loot::MessageType type)
+{
+  switch (type)
+  {
+    case loot::MessageType::say:   return "info";
+    case loot::MessageType::warn:  return "warn";
+    case loot::MessageType::error: return "error";
+    default: return "unknown";
+  }
 }
 
 
@@ -131,41 +143,6 @@ fs::path LOOTWorker::l10nPath()
 fs::path LOOTWorker::dataPath()
 {
     return fs::path(m_GamePath) / m_GameSettings.DataPath();
-}
-
-std::string LOOTWorker::formatDirty(const loot::PluginCleaningData& cleaningData) const {
-
-    const std::string itmRecords = std::to_string(cleaningData.GetITMCount()) + " ITM record(s)";
-    const std::string deletedReferences = std::to_string(cleaningData.GetDeletedReferenceCount()) + " deleted reference(s)";
-    const std::string deletedNavmeshes = std::to_string(cleaningData.GetDeletedNavmeshCount()) + " deleted navmesh(es)";
-    std::string message;
-    if (cleaningData.GetITMCount() > 0 && cleaningData.GetDeletedReferenceCount() > 0 && cleaningData.GetDeletedNavmeshCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + itmRecords + ", " + deletedReferences + " and " + deletedNavmeshes + ".";
-    else if (cleaningData.GetITMCount() == 0 && cleaningData.GetDeletedReferenceCount() == 0 && cleaningData.GetDeletedNavmeshCount() == 0)
-        message = cleaningData.GetCleaningUtility() + " found dirty edits.";
-    else if (cleaningData.GetITMCount() == 0 && cleaningData.GetDeletedReferenceCount() > 0 && cleaningData.GetDeletedNavmeshCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + deletedReferences + " and " + deletedNavmeshes + ".";
-    else if (cleaningData.GetITMCount() > 0 && cleaningData.GetDeletedReferenceCount() == 0 && cleaningData.GetDeletedNavmeshCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + itmRecords + " and " + deletedNavmeshes + ".";
-    else if (cleaningData.GetITMCount() > 0 && cleaningData.GetDeletedReferenceCount() > 0 && cleaningData.GetDeletedNavmeshCount() == 0)
-        message = cleaningData.GetCleaningUtility() + " found " + itmRecords + " and " + deletedReferences + ".";
-    else if (cleaningData.GetITMCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + itmRecords + ".";
-    else if (cleaningData.GetDeletedReferenceCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + deletedReferences + ".";
-    else if (cleaningData.GetDeletedNavmeshCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + deletedNavmeshes + ".";
-
-    if (cleaningData.GetInfo().empty()) {
-        return loot::Message(loot::MessageType::warn, message).ToSimpleMessage(m_Language).text;
-    }
-
-    auto info = cleaningData.GetInfo();
-    for (auto& content : info) {
-        content = loot::MessageContent(message + " " + content.GetText(), content.GetLanguage());
-    }
-
-    return loot::Message(loot::MessageType::warn, info).ToSimpleMessage(m_Language).text;
 }
 
 void LOOTWorker::getSettings(const fs::path& file) {
@@ -390,7 +367,7 @@ int LOOTWorker::run()
         outf.close();
 
         progress(Progress::ParsingLootMessages);
-        std::ofstream(utf8_path(m_OutputPath)) << createJsonReport(*db, sortedPlugins);
+        std::ofstream(utf8_path(m_OutputPath)) << createJsonReport(*gameHandle, sortedPlugins);
     }
     catch (const std::exception & e) {
         log(loot::LogLevel::error, std::string("LOOT failed: ") + e.what());
@@ -402,46 +379,106 @@ int LOOTWorker::run()
     return 0;
 }
 
-std::string LOOTWorker::createJsonReport(
-  loot::DatabaseInterface& db, const std::vector<std::string>& sortedPlugins) const
+void set(QJsonObject& o, const char* e, const QJsonValue& v)
 {
+  if (v.isObject() && v.toObject().isEmpty()) {
+    return;
+  }
+
+  if (v.isArray() && v.toArray().isEmpty()) {
+    return;
+  }
+
+  if (v.isString() && v.toString().isEmpty()) {
+    return;
+  }
+
+  o[e] = v;
+}
+
+std::string LOOTWorker::createJsonReport(
+  loot::GameInterface& game, const std::vector<std::string>& sortedPlugins) const
+{
+  const auto start = std::chrono::high_resolution_clock::now();
+
   QJsonObject root;
 
-  root["messages"] = createMessages(db);
-  root["plugins"] = createPlugins(db, sortedPlugins);
+  set(root, "messages", createMessages(game.GetDatabase()->GetGeneralMessages(true)));
+  set(root, "plugins", createPlugins(game, sortedPlugins));
+
+  const auto end = std::chrono::high_resolution_clock::now();
+
+  set(root, "stats", QJsonObject{
+    {"time", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()},
+    {"version", LOOTCLI_VERSION_STRING}
+  });
 
   QJsonDocument doc(root);
   return doc.toJson(QJsonDocument::Indented).toStdString();
 }
 
-QJsonArray LOOTWorker::createMessages(loot::DatabaseInterface& db) const
+template <class Container>
+QJsonArray createStringArray(const Container& c)
+{
+  QJsonArray array;
+
+  for (auto&& e : c) {
+    array.push_back(QString::fromStdString(e));
+  }
+
+  return array;
+}
+
+QJsonArray LOOTWorker::createPlugins(
+  loot::GameInterface& game,
+  const std::vector<std::string>& sortedPlugins) const
+{
+  QJsonArray plugins;
+
+  for (auto&& pluginName : sortedPlugins) {
+
+    auto plugin = game.GetPlugin(pluginName);
+
+    QJsonObject o;
+    o["name"] = QString::fromStdString(pluginName);
+
+    if (auto metaData=game.GetDatabase()->GetPluginMetadata(pluginName, true, true)) {
+      set(o, "incompatibilities", createFiles(metaData->GetIncompatibilities()));
+      set(o, "messages", createMessages(metaData->GetMessages()));
+      set(o, "dirty", createDirty(metaData->GetDirtyInfo()));
+      set(o, "clean", createClean(metaData->GetCleanInfo()));
+    }
+
+    set(o, "missingMasters", createMissingMasters(game, pluginName));
+
+    if (plugin->LoadsArchive()) {
+      o["loadsArchive"] = true;
+    }
+
+    if (plugin->IsMaster()) {
+      o["isMaster"] = true;
+    }
+
+    if (plugin->IsLightMaster()) {
+      o["isLightMaster"] = true;
+    }
+
+    // don't add if the name is the only thing in there
+    if (o.size() > 1) {
+      plugins.push_back(o);
+    }
+  }
+
+  return plugins;
+}
+
+QJsonValue LOOTWorker::createMessages(const std::vector<loot::Message>& list) const
 {
   QJsonArray messages;
 
-  for (loot::Message m : db.GetGeneralMessages(true)) {
-    QString type;
-
-    switch (m.GetType())
-    {
-      case loot::MessageType::say:
-        type = "info";
-        break;
-
-      case loot::MessageType::warn:
-        type = "warn";
-        break;
-
-      case loot::MessageType::error:
-        type = "error";
-        break;
-
-      default:
-        type = "unknown";
-        break;
-    }
-
+  for (loot::Message m : list) {
     messages.push_back(QJsonObject{
-      {"type", type},
+      {"type", QString::fromStdString(toString(m.GetType()))},
       {"message", QString::fromStdString(m.ToSimpleMessage(m_Language).text)}
     });
   }
@@ -449,38 +486,74 @@ QJsonArray LOOTWorker::createMessages(loot::DatabaseInterface& db) const
   return messages;
 }
 
-QJsonArray LOOTWorker::createPlugins(
-  loot::DatabaseInterface& db,
-  const std::vector<std::string>& sortedPlugins) const
+QJsonValue LOOTWorker::createDirty(
+  const std::set<loot::PluginCleaningData>& data) const
 {
-  QJsonArray plugins;
+  QJsonArray array;
 
-  for (size_t i = 0; i < sortedPlugins.size(); ++i) {
-    auto metaData = db.GetPluginMetadata(sortedPlugins[i], true, true);
-    if (!metaData) {
-      continue;
-    }
+  for (const auto& d : data) {
+    QJsonObject o{
+      {"crc", static_cast<qint64>(d.GetCRC())},
+      {"itm", static_cast<qint64>(d.GetITMCount())},
+      {"deletedReferences", static_cast<qint64>(d.GetDeletedReferenceCount())},
+      {"deletedNavmesh", static_cast<qint64>(d.GetDeletedNavmeshCount())},
+    };
 
-    const std::set<loot::PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
-    if (dirtyInfo.empty()) {
-      continue;
-    }
+    set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
+    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::warn, d.GetInfo()).ToSimpleMessage(m_Language).text));
 
-    QJsonObject o;
-    o["name"] = QString::fromStdString(sortedPlugins[i]);
-
-    QJsonArray dirtyArray;
-
-    for (const auto& d : dirtyInfo) {
-      dirtyArray.push_back(QString::fromStdString(formatDirty(d)));
-    }
-
-    o["dirty"] = dirtyArray;
-
-    plugins.push_back(o);
+    array.push_back(o);
   }
 
-  return plugins;
+  return array;
+}
+
+QJsonValue LOOTWorker::createClean(
+  const std::set<loot::PluginCleaningData>& data) const
+{
+  QJsonArray array;
+
+  for (const auto& d : data) {
+    QJsonObject o{
+      {"crc", static_cast<qint64>(d.GetCRC())},
+    };
+
+    set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
+    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::warn, d.GetInfo()).ToSimpleMessage(m_Language).text));
+
+    array.push_back(o);
+  }
+
+  return array;
+}
+
+
+QJsonValue LOOTWorker::createFiles(const std::set<loot::File>& data) const
+{
+  QJsonArray array;
+
+  for (auto&& f : data) {
+    array.push_back(QJsonObject{
+      {"name", QString::fromStdString(f.GetName())},
+      {"displayName", QString::fromStdString(f.GetDisplayName())}
+    });
+  }
+
+  return array;
+}
+
+QJsonValue LOOTWorker::createMissingMasters(
+  loot::GameInterface& game, const std::string& pluginName) const
+{
+  QJsonArray array;
+
+  for (auto&& master : game.GetPlugin(pluginName)->GetMasters()) {
+    if (!game.GetPlugin(master)) {
+      array.push_back(QString::fromStdString(master));
+    }
+  }
+
+  return array;
 }
 
 void LOOTWorker::progress(Progress p)
