@@ -1,7 +1,5 @@
 #include "game_settings.h"
 
-#include <boost/locale.hpp>
-
 using std::filesystem::exists;
 using std::filesystem::u8path;
 

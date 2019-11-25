@@ -1,19 +1,18 @@
 #ifndef LOOTTHREAD_H
 #define LOOTTHREAD_H
 
-#include <loot/api.h>
-#include <string>
-#include <map>
-#include <mutex>
-#include <filesystem>
-#include <game_settings.h>
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-
+#include <lootcli/lootcli.h>
+#include "game_settings.h"
 
 namespace loot {
   class Game;
 }
+
+
+namespace lootcli {
+
+loot::LogLevel toLootLogLevel(lootcli::LogLevels level);
+lootcli::LogLevels fromLootLogLevel(loot::LogLevel level);
 
 class LOOTWorker
 {
@@ -25,17 +24,16 @@ public:
   void setOutput(const std::string &outputPath);
   void setPluginListPath(const std::string &pluginListPath);
   void setLanguageCode(const std::string &language_code); //Will add this when I figure out how languages work on MO
+  void setLogLevel(loot::LogLevel level);
 
   void setUpdateMasterlist(bool update);
-  std::string formatDirty(const loot::PluginCleaningData &cleaningData);
-  loot::GameSettings m_GameSettings;
 
   int run();
 
 private:
+  void progress(Progress p);
+  void log(loot::LogLevel level, const std::string& message) const;
 
-  void progress(const std::string &step = "");
-  void errorOccured(const std::string &message);
   void getSettings(const std::filesystem::path& file);
 
   std::filesystem::path masterlistPath();
@@ -53,19 +51,33 @@ private:
   //template <typename T> T resolveFunction(HMODULE lib, const char *name);
 
 private:
-
   loot::GameType m_GameId;
   std::string m_Language;
   std::string m_GameName;
   std::string m_GamePath;
   std::string m_OutputPath;
   std::string m_PluginListPath;
-  std::string m_ProgressStep;
+  loot::LogLevel m_LogLevel;
   bool m_UpdateMasterlist;
-  //HMODULE m_Library;
-
-  //std::map<std::string, FARPROC> m_ResolveLookup;
   mutable std::recursive_mutex mutex_;
+  loot::GameSettings m_GameSettings;
+  std::chrono::high_resolution_clock::time_point m_startTime;
+
+  std::string createJsonReport(
+    loot::GameInterface& game,
+    const std::vector<std::string>& sortedPlugins) const;
+
+  QJsonArray createPlugins(
+    loot::GameInterface& game,
+    const std::vector<std::string>& sortedPlugins) const;
+
+  QJsonValue createMessages(const std::vector<loot::Message>& list) const;
+  QJsonValue createDirty(const std::set<loot::PluginCleaningData>& data) const;
+  QJsonValue createClean(const std::set<loot::PluginCleaningData>& data) const;
+  QJsonValue createFiles(const std::set<loot::File>& data) const;
+  QJsonValue createMissingMasters(loot::GameInterface& game, const std::string& pluginName) const;
 };
+
+} // namespace
 
 #endif // LOOTTHREAD_H

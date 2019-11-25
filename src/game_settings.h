@@ -1,13 +1,6 @@
 #ifndef LOOT_GUI_STATE_GAME_SETTINGS
 #define LOOT_GUI_STATE_GAME_SETTINGS
 
-#include <filesystem>
-#include <optional>
-#include <set>
-#include <string>
-
-#include "loot/enum/game_type.h"
-
 namespace loot {
 	class GameSettings {
 	public:
