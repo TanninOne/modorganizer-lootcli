@@ -37,7 +37,6 @@ std::string toString(loot::MessageType type)
 
 LOOTWorker::LOOTWorker()
     : m_GameId(loot::GameType::tes5)
-    , m_Language(loot::MessageContent::defaultLanguage)
     , m_GameName("Skyrim")
     , m_LogLevel(loot::LogLevel::info)
 {
@@ -248,16 +247,9 @@ void LOOTWorker::getSettings(const fs::path& file) {
         }
     }
 
-    m_Language = settings->get_as<std::string>("language").value_or(m_Language);
-
-    if (m_Language != loot::MessageContent::defaultLanguage) {
-      log(loot::LogLevel::debug, "initialising language settings");
-      log(loot::LogLevel::debug, "selected language: " + m_Language);
-
-      //Boost.Locale initialisation: Generate and imbue locales.
-      boost::locale::generator gen;
-      std::locale::global(gen(m_Language + ".UTF-8"));
-      loot::InitialiseLocale(m_Language + ".UTF-8");
+    if (m_Language.empty()) {
+      m_Language = settings->get_as<std::string>("language")
+        .value_or(loot::MessageContent::defaultLanguage);
     }
 }
 
@@ -270,15 +262,17 @@ int LOOTWorker::run()
 {
     m_startTime = std::chrono::high_resolution_clock::now();
 
-    // Do some preliminary locale / UTF-8 support setup here, in case the settings file reading requires it.
-    //Boost.Locale initialisation: Specify location of language dictionaries.
-    boost::locale::generator gen;
-    gen.add_messages_path(l10nPath().string());
-    gen.add_messages_domain("loot");
+    {
+      // Do some preliminary locale / UTF-8 support setup here, in case the settings file reading requires it.
+      //Boost.Locale initialisation: Specify location of language dictionaries.
+      boost::locale::generator gen;
+      gen.add_messages_path(l10nPath().string());
+      gen.add_messages_domain("loot");
 
-    //Boost.Locale initialisation: Generate and imbue locales.
-    std::locale::global(gen("en.UTF-8"));
-    loot::InitialiseLocale("en.UTF-8");
+      //Boost.Locale initialisation: Generate and imbue locales.
+      std::locale::global(gen("en.UTF-8"));
+      loot::InitialiseLocale("en.UTF-8");
+    }
 
     loot::SetLoggingCallback([&](loot::LogLevel level, const char* message) {
       log(level, message);
@@ -309,6 +303,16 @@ int LOOTWorker::run()
 
         if (fs::exists(settings))
             getSettings(settings);
+
+        if (m_Language != loot::MessageContent::defaultLanguage) {
+          log(loot::LogLevel::debug, "initialising language settings");
+          log(loot::LogLevel::debug, "selected language: " + m_Language);
+
+          //Boost.Locale initialisation: Generate and imbue locales.
+          boost::locale::generator gen;
+          std::locale::global(gen(m_Language + ".UTF-8"));
+          loot::InitialiseLocale(m_Language + ".UTF-8");
+        }
 
         bool mlUpdated = false;
         if (m_UpdateMasterlist) {

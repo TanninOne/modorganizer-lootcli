@@ -83,6 +83,11 @@ int WinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
     worker.setOutput(getParameter<std::string>(arguments, "out"));
     worker.setLogLevel(getLogLevel(arguments));
 
+    const auto lang = getOptionalParameter<std::string>(arguments, "language", "");
+    if (!lang.empty()) {
+      worker.setLanguageCode(lang);
+    }
+
     return worker.run();
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what();
