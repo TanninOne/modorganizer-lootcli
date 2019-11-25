@@ -11,18 +11,6 @@ using std::recursive_mutex;
 namespace lootcli
 {
 
-fs::path utf8_path(const std::string& s)
-{
-  std::u8string u8s;
-  u8s.reserve(s.size());
-
-  for (const char c : s) {
-    u8s.append(1 ,static_cast<const char8_t>(c));
-  }
-
-  return u8s;
-}
-
 std::string toString(loot::MessageType type)
 {
   switch (type)
@@ -224,12 +212,12 @@ void LOOTWorker::getSettings(const fs::path& file) {
 
                     auto path = game->get_as<std::string>("path");
                     if (path) {
-                        newSettings.SetGamePath(utf8_path(*path));
+                        newSettings.SetGamePath(*path);
                     }
 
                     auto localPath = game->get_as<std::string>("local_path");
                     if (localPath) {
-                        newSettings.SetGameLocalPath(utf8_path(*localPath));
+                        newSettings.SetGameLocalPath(*localPath);
                     }
 
                     auto registry = game->get_as<std::string>("registry");
@@ -294,7 +282,7 @@ int LOOTWorker::run()
         fs::path profile(m_PluginListPath);
         profile = profile.parent_path();
         auto gameHandle = CreateGameHandle(
-          m_GameId, utf8_path(m_GamePath), utf8_path(profile.string()));
+          m_GameId, m_GamePath, profile.string());
         auto db = gameHandle->GetDatabase();
 
         m_GameSettings = loot::GameSettings(m_GameId);
@@ -324,11 +312,11 @@ int LOOTWorker::run()
             progress(Progress::UpdatingMasterlist);
 
             mlUpdated = db->UpdateMasterlist(
-              utf8_path(masterlistPath().string()),
+              masterlistPath().string(),
               m_GameSettings.RepoURL(),
               m_GameSettings.RepoBranch());
 
-            if (mlUpdated && !db->IsLatestMasterlist(utf8_path(masterlistPath().string()), m_GameSettings.RepoBranch())) {
+            if (mlUpdated && !db->IsLatestMasterlist(masterlistPath().string(), m_GameSettings.RepoBranch())) {
                 log(loot::LogLevel::error,
                   "the latest masterlist revision contains a syntax error, "
                   "LOOT is using the most recent valid revision instead. "
@@ -340,8 +328,8 @@ int LOOTWorker::run()
 
         fs::path userlist = userlistPath();
         db->LoadLists(
-          utf8_path(masterlistPath().string()),
-          fs::exists(userlist) ? utf8_path(userlistPath().string()) : fs::path());
+          masterlistPath().string(),
+          fs::exists(userlist) ? userlistPath().string() : fs::path());
 
         progress(Progress::ReadingPlugins);
 
@@ -361,7 +349,7 @@ int LOOTWorker::run()
 
         progress(Progress::WritingLoadorder);
 
-        std::ofstream outf(utf8_path(m_PluginListPath));
+        std::ofstream outf(m_PluginListPath);
         if (!outf) {
             log(loot::LogLevel::error, "failed to open " + m_PluginListPath + " to rewrite it");
             return 1;
@@ -373,7 +361,7 @@ int LOOTWorker::run()
         outf.close();
 
         progress(Progress::ParsingLootMessages);
-        std::ofstream(utf8_path(m_OutputPath)) << createJsonReport(*gameHandle, sortedPlugins);
+        std::ofstream(m_OutputPath) << createJsonReport(*gameHandle, sortedPlugins);
     }
     catch (const std::exception & e) {
         log(loot::LogLevel::error, std::string("LOOT failed: ") + e.what());
