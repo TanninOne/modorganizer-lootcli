@@ -268,6 +268,8 @@ std::string escape(const std::string& s)
 
 int LOOTWorker::run()
 {
+    m_startTime = std::chrono::high_resolution_clock::now();
+
     // Do some preliminary locale / UTF-8 support setup here, in case the settings file reading requires it.
     //Boost.Locale initialisation: Specify location of language dictionaries.
     boost::locale::generator gen;
@@ -399,8 +401,6 @@ void set(QJsonObject& o, const char* e, const QJsonValue& v)
 std::string LOOTWorker::createJsonReport(
   loot::GameInterface& game, const std::vector<std::string>& sortedPlugins) const
 {
-  const auto start = std::chrono::high_resolution_clock::now();
-
   QJsonObject root;
 
   set(root, "messages", createMessages(game.GetDatabase()->GetGeneralMessages(true)));
@@ -409,8 +409,9 @@ std::string LOOTWorker::createJsonReport(
   const auto end = std::chrono::high_resolution_clock::now();
 
   set(root, "stats", QJsonObject{
-    {"time", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()},
-    {"version", LOOTCLI_VERSION_STRING}
+    {"time", std::chrono::duration_cast<std::chrono::milliseconds>(end - m_startTime).count()},
+    {"lootcliVersion", LOOTCLI_VERSION_STRING},
+    {"lootVersion", QString::fromStdString(loot::LootVersion::GetVersionString())}
   });
 
   QJsonDocument doc(root);

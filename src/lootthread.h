@@ -61,6 +61,7 @@ private:
   bool m_UpdateMasterlist;
   mutable std::recursive_mutex mutex_;
   loot::GameSettings m_GameSettings;
+  std::chrono::high_resolution_clock::time_point m_startTime;
 
   std::string createJsonReport(
     loot::GameInterface& game,
