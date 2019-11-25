@@ -74,8 +74,12 @@ private:
   QJsonValue createMessages(const std::vector<loot::Message>& list) const;
   QJsonValue createDirty(const std::set<loot::PluginCleaningData>& data) const;
   QJsonValue createClean(const std::set<loot::PluginCleaningData>& data) const;
-  QJsonValue createFiles(const std::set<loot::File>& data) const;
-  QJsonValue createMissingMasters(loot::GameInterface& game, const std::string& pluginName) const;
+
+  QJsonValue createIncompatibilities(
+    loot::GameInterface& game, const std::set<loot::File>& data) const;
+
+  QJsonValue createMissingMasters(
+    loot::GameInterface& game, const std::string& pluginName) const;
 };
 
 } // namespace

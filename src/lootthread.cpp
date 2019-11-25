@@ -259,7 +259,6 @@ int LOOTWorker::run()
 
       //Boost.Locale initialisation: Generate and imbue locales.
       std::locale::global(gen("en.UTF-8"));
-      loot::InitialiseLocale("en.UTF-8");
     }
 
     loot::SetLoggingCallback([&](loot::LogLevel level, const char* message) {
@@ -299,7 +298,6 @@ int LOOTWorker::run()
           //Boost.Locale initialisation: Generate and imbue locales.
           boost::locale::generator gen;
           std::locale::global(gen(m_Language + ".UTF-8"));
-          loot::InitialiseLocale(m_Language + ".UTF-8");
         }
 
         bool mlUpdated = false;
@@ -436,7 +434,7 @@ QJsonArray LOOTWorker::createPlugins(
     o["name"] = QString::fromStdString(pluginName);
 
     if (auto metaData=game.GetDatabase()->GetPluginMetadata(pluginName, true, true)) {
-      set(o, "incompatibilities", createFiles(metaData->GetIncompatibilities()));
+      set(o, "incompatibilities", createIncompatibilities(game, metaData->GetIncompatibilities()));
       set(o, "messages", createMessages(metaData->GetMessages()));
       set(o, "dirty", createDirty(metaData->GetDirtyInfo()));
       set(o, "clean", createClean(metaData->GetCleanInfo()));
@@ -521,20 +519,26 @@ QJsonValue LOOTWorker::createClean(
 }
 
 
-QJsonValue LOOTWorker::createFiles(const std::set<loot::File>& data) const
+QJsonValue LOOTWorker::createIncompatibilities(
+  loot::GameInterface& game, const std::set<loot::File>& data) const
 {
   QJsonArray array;
 
   for (auto&& f : data) {
-    const auto n = QString::fromStdString(f.GetName());
-    const auto dn = QString::fromStdString(f.GetDisplayName());
+    const auto n = f.GetName();
+    if (!game.GetPlugin(n)) {
+      continue;
+    }
+
+    const auto name = QString::fromStdString(n);
+    const auto displayName = QString::fromStdString(f.GetDisplayName());
 
     QJsonObject o{
-      {"name", n}
+      {"name", name}
     };
 
-    if (dn != n) {
-      set(o, "displayName", dn);
+    if (displayName != name) {
+      set(o, "displayName", displayName);
     }
 
     array.push_back(std::move(o));
