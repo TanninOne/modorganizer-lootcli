@@ -36,11 +36,11 @@ private:
 
   void getSettings(const std::filesystem::path& file);
 
-  std::filesystem::path masterlistPath();
-  std::filesystem::path settingsPath();
-  std::filesystem::path userlistPath();
-  std::filesystem::path l10nPath();
-  std::filesystem::path dataPath();
+  std::filesystem::path masterlistPath() const;
+  std::filesystem::path settingsPath() const;
+  std::filesystem::path userlistPath() const;
+  std::filesystem::path l10nPath() const;
+  std::filesystem::path dataPath() const;
 
 private:
 
@@ -62,6 +62,8 @@ private:
   mutable std::recursive_mutex mutex_;
   loot::GameSettings m_GameSettings;
   std::chrono::high_resolution_clock::time_point m_startTime;
+
+  std::vector<std::string> getPluginsList(loot::GameInterface& game) const;
 
   std::string createJsonReport(
     loot::GameInterface& game,
