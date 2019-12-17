@@ -45,6 +45,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QFileInfo>
+#include <QDir>
 
 // boost
 #include <boost/algorithm/string.hpp>
