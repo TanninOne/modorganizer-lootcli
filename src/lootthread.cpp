@@ -354,8 +354,17 @@ int LOOTWorker::run()
         progress(Progress::ParsingLootMessages);
         std::ofstream(m_OutputPath) << createJsonReport(*gameHandle, sortedPlugins);
     }
+    catch(std::system_error& e) {
+      if (e.code().category() == loot::libgit2_category()) {
+        log(loot::LogLevel::error, "A firewall may be blocking LOOT.");
+      }
+
+      log(loot::LogLevel::error, e.what());
+
+      return 1;
+    }
     catch (const std::exception & e) {
-        log(loot::LogLevel::error, std::string("LOOT failed: ") + e.what());
+        log(loot::LogLevel::error, e.what());
         return 1;
     }
 
@@ -385,6 +394,22 @@ std::vector<std::string> LOOTWorker::getPluginsList(loot::GameInterface& game) c
       continue;
     }
 
+    if (!fs::exists(dataPath() / line)) {
+      const auto loadorder = QDir::toNativeSeparators(
+        QFileInfo(QString::fromStdString(m_PluginListPath))
+          .absoluteFilePath()).toStdString();
+
+      const auto data = QDir::toNativeSeparators(
+        QDir(QString::fromStdWString(dataPath().native())).absolutePath())
+          .toStdString();
+
+      log(
+        loot::LogLevel::error,
+        "Plugin '" + line + "' is in the load order file "
+        "'" + loadorder + "' but does not exist on the filesystem "
+        "in '" + data + "'.");
+    }
+
     log(loot::LogLevel::info, "Found plugin: " + line);
 
     pluginsListForSearch.insert(line);
@@ -407,11 +432,15 @@ std::vector<std::string> LOOTWorker::getPluginsList(loot::GameInterface& game) c
     }
 
     if (!pluginsListForSearch.contains(name)) {
+      const auto loadorder = QDir::toNativeSeparators(
+        QFileInfo(QString::fromStdString(m_PluginListPath))
+        .absoluteFilePath()).toStdString();
+
       log(
         loot::LogLevel::warning,
-        "plugin '" + it->path().string() + "' was found on the "
-        "filesystem but it was not in '" + m_PluginListPath + "'; "
-        "adding to the end");
+        "Plugin '" + it->path().string() + "' was found on the "
+        "filesystem but it was not in '" + loadorder + "'; "
+        "adding to the end.");
 
       pluginsList.push_back(name);
     }
