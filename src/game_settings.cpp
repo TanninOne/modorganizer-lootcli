@@ -1,11 +1,8 @@
 #include "game_settings.h"
 
-using std::filesystem::exists;
-using std::filesystem::u8path;
-
 namespace loot {
 	const std::set<std::string> GameSettings::oldDefaultBranches(
-		{"master", "v0.7", "v0.8", "v0.10", "v0.13"}
+		{"master", "v0.7", "v0.8", "v0.10", "v0.13", "v0.14"}
 	);
 
 	GameSettings::GameSettings() :
@@ -14,7 +11,7 @@ namespace loot {
 
 	GameSettings::GameSettings(const GameType gameCode, const std::string& folder) :
 		type_(gameCode),
-		repositoryBranch_("v0.14") {
+		repositoryBranch_("v0.15") {
 		if (Type() == GameType::tes3) {
 			name_ = "TES III: Morrowind";
 			registryKey_ = "Software\\Bethesda Softworks\\Morrowind\\Installed Path";
@@ -97,10 +94,9 @@ namespace loot {
 		return oldDefaultBranches.count(repositoryBranch_) == 1;
 	}
 
-	bool GameSettings::operator == (const GameSettings& rhs) const {
-		using boost::locale::to_lower;
-		return to_lower(name_) == to_lower(rhs.Name()) ||
-			to_lower(lootFolderName_) == to_lower(rhs.FolderName());
+	bool GameSettings::operator==(const GameSettings& rhs) const {
+		return name_ == rhs.Name() ||
+			lootFolderName_ == rhs.FolderName();
 	}
 
 	GameType GameSettings::Type() const {
@@ -143,8 +139,8 @@ namespace loot {
 		return gameLocalPath_;
 	}
 
-	std::string GameSettings::DataPath() const {
-		return pluginsFolderName_;
+	std::filesystem::path GameSettings::DataPath() const {
+		return gamePath_ / pluginsFolderName_;
 	}
 
 	GameSettings& GameSettings::SetName(const std::string& name) {

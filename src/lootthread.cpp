@@ -131,7 +131,7 @@ fs::path LOOTWorker::l10nPath() const
 
 fs::path LOOTWorker::dataPath() const
 {
-    return fs::path(m_GamePath) / m_GameSettings.DataPath();
+    return m_GameSettings.DataPath();
 }
 
 void LOOTWorker::getSettings(const fs::path& file) {
