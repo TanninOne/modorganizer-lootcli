@@ -293,6 +293,8 @@ int LOOTWorker::run()
         if (fs::exists(settings))
             getSettings(settings);
 
+        m_GameSettings.SetGamePath(m_GamePath);
+
         if (m_Language != loot::MessageContent::defaultLanguage) {
           log(loot::LogLevel::debug, "initialising language settings");
           log(loot::LogLevel::debug, "selected language: " + m_Language);
