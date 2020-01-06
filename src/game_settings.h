@@ -1,5 +1,5 @@
-#ifndef LOOT_GUI_STATE_GAME_SETTINGS
-#define LOOT_GUI_STATE_GAME_SETTINGS
+#ifndef LOOT_GUI_STATE_GAME_GAME_SETTINGS
+#define LOOT_GUI_STATE_GAME_GAME_SETTINGS
 
 #include <filesystem>
 #include <optional>
@@ -16,7 +16,7 @@ namespace loot {
 
 		bool IsRepoBranchOldDefault() const;
 
-		bool operator == (const GameSettings& rhs) const;  //Compares names and folder names.
+		bool operator==(const GameSettings& rhs) const;  //Compares names and folder names.
 
 		GameType Type() const;
 		std::string Name() const;  //Returns the game's name, eg. "TES IV: Oblivion".
@@ -26,9 +26,9 @@ namespace loot {
 		std::string RegistryKey() const;
 		std::string RepoURL() const;
 		std::string RepoBranch() const;
-        std::string DataPath() const;
 		std::filesystem::path GamePath() const;
 		std::filesystem::path GameLocalPath() const;
+		std::filesystem::path DataPath() const;
 
 		GameSettings& SetName(const std::string& name);
 		GameSettings& SetMaster(const std::string& masterFile);

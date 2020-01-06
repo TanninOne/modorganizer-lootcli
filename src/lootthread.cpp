@@ -1,82 +1,61 @@
 #include "lootthread.h"
-#pragma warning (push, 0)
+#include "game_settings.h"
+#include "version.h"
 
-#include <loot/api.h>
-
-#pragma warning (pop)
-
-#include <thread>
-#include <mutex>
-#include <ctype.h>
-#include <map>
-#include <exception>
-#include <stdio.h>
-#include <stddef.h>
-#include <algorithm>
-#include <stdexcept>
-#include <utility>
-#include <sstream>
-#include <fstream>
-#include <memory>
-#include <filesystem>
-
-#include <boost/assign.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/format.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/locale.hpp>
-#include <game_settings.h>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-
-#pragma warning(push)
-#pragma warning(disable: 4003)
-#include <cpptoml.h>
-#pragma warning(pop)
-
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <Shlobj.h>
-
-using namespace loot;
+//using namespace loot;
 namespace fs = std::filesystem;
 
-using boost::property_tree::ptree;
-using boost::property_tree::write_json;
 using std::lock_guard;
 using std::recursive_mutex;
-using std::filesystem::u8path;
+
+namespace lootcli
+{
+
+std::string toString(loot::MessageType type)
+{
+  switch (type)
+  {
+    case loot::MessageType::say:   return "info";
+    case loot::MessageType::warn:  return "warn";
+    case loot::MessageType::error: return "error";
+    default: return "unknown";
+  }
+}
 
 
 LOOTWorker::LOOTWorker()
-    : m_GameId(GameType::tes5)
-    , m_Language(MessageContent::defaultLanguage)
+    : m_GameId(loot::GameType::tes5)
     , m_GameName("Skyrim")
+    , m_LogLevel(loot::LogLevel::info)
 {
 }
 
-std::string ToLower(const std::string& text)
+std::string ToLower(std::string text)
 {
-    std::string result = text;
-    std::transform(text.begin(), text.end(), result.begin(), tolower);
-    return result;
+    std::transform(
+      text.begin(), text.end(), text.begin(),
+      [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    return text;
 }
 
 
 void LOOTWorker::setGame(const std::string& gameName)
 {
-    static std::map<std::string, GameType> gameMap = boost::assign::map_list_of
-    ("morrowind", GameType::tes3)
-        ("oblivion", GameType::tes4)
-        ("fallout3", GameType::fo3)
-        ("fallout4", GameType::fo4)
-        ("fallout4vr", GameType::fo4vr)
-        ("falloutnv", GameType::fonv)
-        ("skyrim", GameType::tes5)
-        ("skyrimse", GameType::tes5se)
-        ("skyrimvr", GameType::tes5vr);
+  static std::map<std::string, loot::GameType> gameMap = {
+    {"morrowind",  loot::GameType::tes3},
+    {"oblivion",   loot::GameType::tes4},
+    {"fallout3",   loot::GameType::fo3},
+    {"fallout4",   loot::GameType::fo4},
+    {"fallout4vr", loot::GameType::fo4vr},
+    {"falloutnv",  loot::GameType::fonv},
+    {"skyrim",     loot::GameType::tes5},
+    {"skyrimse",   loot::GameType::tes5se},
+    {"skyrimvr",   loot::GameType::tes5vr},
+  };
 
     auto iter = gameMap.find(ToLower(gameName));
+
     if (iter != gameMap.end()) {
         m_GameName = gameName;
         if (ToLower(gameName) == "skyrimse") {
@@ -85,7 +64,7 @@ void LOOTWorker::setGame(const std::string& gameName)
         m_GameId = iter->second;
     }
     else {
-        throw std::runtime_error((boost::format("invalid game name \"%1%\"") % gameName).str());
+        throw std::runtime_error("invalid game name \"" + gameName + "\"");
     }
 }
 
@@ -103,25 +82,21 @@ void LOOTWorker::setUpdateMasterlist(bool update)
 {
     m_UpdateMasterlist = update;
 }
-void LOOTWorker::setPluginListPath(const std::string& pluginListPath) {
+
+void LOOTWorker::setPluginListPath(const std::string& pluginListPath)
+{
     m_PluginListPath = pluginListPath;
 }
 
-void LOOTWorker::setLanguageCode(const std::string& languageCode) {
+void LOOTWorker::setLanguageCode(const std::string& languageCode)
+{
     m_Language = languageCode;
 }
 
-/*void LOOTWorker::handleErr(unsigned int resultCode, const char *description)
+void LOOTWorker::setLogLevel(loot::LogLevel level)
 {
-if (resultCode != LVAR(loot_ok)) {
-const char *errMessage;
-unsigned int lastError = LFUNC(loot_get_error_message)(&errMessage);
-throw std::runtime_error((boost::format("%1% failed: %2% (code %3%)") % description % errMessage % lastError).str());
-} else {
-progress(description);
+  m_LogLevel = level;
 }
-}*/
-
 
 fs::path GetLOOTAppData() {
     TCHAR path[MAX_PATH];
@@ -135,61 +110,28 @@ fs::path GetLOOTAppData() {
     }
 }
 
-fs::path LOOTWorker::masterlistPath() {
+fs::path LOOTWorker::masterlistPath() const
+{
     return GetLOOTAppData() / m_GameSettings.FolderName() / "masterlist.yaml";
 }
 
-fs::path LOOTWorker::userlistPath() {
+fs::path LOOTWorker::userlistPath() const
+{
     return GetLOOTAppData() / m_GameSettings.FolderName() / "userlist.yaml";
 }
-fs::path LOOTWorker::settingsPath()
+fs::path LOOTWorker::settingsPath() const
 {
     return GetLOOTAppData() / "settings.toml";
 }
 
-fs::path LOOTWorker::l10nPath()
+fs::path LOOTWorker::l10nPath() const
 {
     return GetLOOTAppData() / "resources" / "l10n";
 }
 
-fs::path LOOTWorker::dataPath()
+fs::path LOOTWorker::dataPath() const
 {
-    return fs::path(m_GamePath) / m_GameSettings.DataPath();
-}
-
-std::string LOOTWorker::formatDirty(const PluginCleaningData& cleaningData) {
-
-    const std::string itmRecords = std::to_string(cleaningData.GetITMCount()) + " ITM record(s)";
-    const std::string deletedReferences = std::to_string(cleaningData.GetDeletedReferenceCount()) + " deleted reference(s)";
-    const std::string deletedNavmeshes = std::to_string(cleaningData.GetDeletedNavmeshCount()) + " deleted navmesh(es)";
-    std::string message;
-    if (cleaningData.GetITMCount() > 0 && cleaningData.GetDeletedReferenceCount() > 0 && cleaningData.GetDeletedNavmeshCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + itmRecords + ", " + deletedReferences + " and " + deletedNavmeshes + ".";
-    else if (cleaningData.GetITMCount() == 0 && cleaningData.GetDeletedReferenceCount() == 0 && cleaningData.GetDeletedNavmeshCount() == 0)
-        message = cleaningData.GetCleaningUtility() + " found dirty edits.";
-    else if (cleaningData.GetITMCount() == 0 && cleaningData.GetDeletedReferenceCount() > 0 && cleaningData.GetDeletedNavmeshCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + deletedReferences + " and " + deletedNavmeshes + ".";
-    else if (cleaningData.GetITMCount() > 0 && cleaningData.GetDeletedReferenceCount() == 0 && cleaningData.GetDeletedNavmeshCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + itmRecords + " and " + deletedNavmeshes + ".";
-    else if (cleaningData.GetITMCount() > 0 && cleaningData.GetDeletedReferenceCount() > 0 && cleaningData.GetDeletedNavmeshCount() == 0)
-        message = cleaningData.GetCleaningUtility() + " found " + itmRecords + " and " + deletedReferences + ".";
-    else if (cleaningData.GetITMCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + itmRecords + ".";
-    else if (cleaningData.GetDeletedReferenceCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + deletedReferences + ".";
-    else if (cleaningData.GetDeletedNavmeshCount() > 0)
-        message = cleaningData.GetCleaningUtility() + " found " + deletedNavmeshes + ".";
-
-    if (cleaningData.GetInfo().empty()) {
-        return Message(MessageType::warn, message).ToSimpleMessage(m_Language).text;
-    }
-
-    auto info = cleaningData.GetInfo();
-    for (auto& content : info) {
-        content = MessageContent(message + " " + content.GetText(), content.GetLanguage());
-    }
-
-    return Message(MessageType::warn, info).ToSimpleMessage(m_Language).text;
+    return m_GameSettings.DataPath();
 }
 
 void LOOTWorker::getSettings(const fs::path& file) {
@@ -200,6 +142,9 @@ void LOOTWorker::getSettings(const fs::path& file) {
     if (games) {
         for (const auto& game : *games) {
             try {
+                using loot::GameSettings;
+                using loot::GameType;
+
                 GameSettings newSettings;
 
                 auto type = game->get_as<std::string>("type");
@@ -269,12 +214,12 @@ void LOOTWorker::getSettings(const fs::path& file) {
 
                     auto path = game->get_as<std::string>("path");
                     if (path) {
-                        newSettings.SetGamePath(u8path(*path));
+                        newSettings.SetGamePath(*path);
                     }
 
                     auto localPath = game->get_as<std::string>("local_path");
                     if (localPath) {
-                        newSettings.SetGameLocalPath(u8path(*localPath));
+                        newSettings.SetGameLocalPath(*localPath);
                     }
 
                     auto registry = game->get_as<std::string>("registry");
@@ -292,61 +237,42 @@ void LOOTWorker::getSettings(const fs::path& file) {
         }
     }
 
-    m_Language = settings->get_as<std::string>("language").value_or(m_Language);
-
-    if (m_Language != MessageContent::defaultLanguage) {
-        BOOST_LOG_TRIVIAL(debug) << "Initialising language settings.";
-        BOOST_LOG_TRIVIAL(debug) << "Selected language: " << m_Language;
-
-        //Boost.Locale initialisation: Generate and imbue locales.
-        boost::locale::generator gen;
-        std::locale::global(gen(m_Language + ".UTF-8"));
-        InitialiseLocale(m_Language + ".UTF-8");
+    if (m_Language.empty()) {
+      m_Language = settings->get_as<std::string>("language")
+        .value_or(loot::MessageContent::defaultLanguage);
     }
+}
+
+std::string escape(const std::string& s)
+{
+  return boost::replace_all_copy(s, "\"", "\\\"");
 }
 
 int LOOTWorker::run()
 {
-    // Do some preliminary locale / UTF-8 support setup here, in case the settings file reading requires it.
-    //Boost.Locale initialisation: Specify location of language dictionaries.
-    boost::locale::generator gen;
-    gen.add_messages_path(l10nPath().string());
-    gen.add_messages_domain("loot");
+    m_startTime = std::chrono::high_resolution_clock::now();
 
-    //Boost.Locale initialisation: Generate and imbue locales.
-    std::locale::global(gen("en.UTF-8"));
-    InitialiseLocale("en.UTF-8");
-    SetLoggingCallback([&](LogLevel level, const char* message) {
-        switch (level) {
-        case LogLevel::trace:
-            progress();
-            break;
-        case LogLevel::debug:
-            progress();
-            break;
-        case LogLevel::info:
-            progress();
-            break;
-        case LogLevel::warning:
-            BOOST_LOG_TRIVIAL(warning) << message;
-            break;
-        case LogLevel::error:
-            BOOST_LOG_TRIVIAL(error) << message;
-            break;
-        case LogLevel::fatal:
-            BOOST_LOG_TRIVIAL(fatal) << message;
-            break;
-        default:
-            BOOST_LOG_TRIVIAL(trace) << message;
-            break;
-        }
-        });
+    {
+      // Do some preliminary locale / UTF-8 support setup here, in case the settings file reading requires it.
+      //Boost.Locale initialisation: Specify location of language dictionaries.
+      boost::locale::generator gen;
+      gen.add_messages_path(l10nPath().string());
+      gen.add_messages_domain("loot");
+
+      //Boost.Locale initialisation: Generate and imbue locales.
+      std::locale::global(gen("en.UTF-8"));
+    }
+
+    loot::SetLoggingCallback([&](loot::LogLevel level, const char* message) {
+      log(level, message);
+    });
+
 
     try {
         // ensure the loot directory exists
         fs::path lootAppData = GetLOOTAppData();
         if (lootAppData.empty()) {
-            errorOccured("failed to create loot app data path");
+            log(loot::LogLevel::error, "failed to create loot app data path");
             return 1;
         }
 
@@ -356,61 +282,69 @@ int LOOTWorker::run()
 
         fs::path profile(m_PluginListPath);
         profile = profile.parent_path();
-        auto gameHandle = CreateGameHandle(m_GameId, u8path(m_GamePath), u8path(profile.string()));
+        auto gameHandle = CreateGameHandle(
+          m_GameId, m_GamePath, profile.string());
         auto db = gameHandle->GetDatabase();
 
-        m_GameSettings = GameSettings(m_GameId);
+        m_GameSettings = loot::GameSettings(m_GameId);
 
         fs::path settings = settingsPath();
 
         if (fs::exists(settings))
             getSettings(settings);
 
+        m_GameSettings.SetGamePath(m_GamePath);
+
+        if (m_Language != loot::MessageContent::defaultLanguage) {
+          log(loot::LogLevel::debug, "initialising language settings");
+          log(loot::LogLevel::debug, "selected language: " + m_Language);
+
+          //Boost.Locale initialisation: Generate and imbue locales.
+          boost::locale::generator gen;
+          std::locale::global(gen(m_Language + ".UTF-8"));
+        }
+
         bool mlUpdated = false;
         if (m_UpdateMasterlist) {
-            m_ProgressStep = "Checking Masterlist Existence";
-            progress();
+            progress(Progress::CheckingMasterlistExistence);
             if (!fs::exists(masterlistPath())) {
                 fs::create_directories(masterlistPath().parent_path());
             }
-            m_ProgressStep = "Updating Masterlist";
-            progress();
 
-            mlUpdated = db->UpdateMasterlist(u8path(masterlistPath().string()), m_GameSettings.RepoURL(), m_GameSettings.RepoBranch());
-            if (mlUpdated && !db->IsLatestMasterlist(u8path(masterlistPath().string()), m_GameSettings.RepoBranch())) {
-                errorOccured(boost::locale::translate("The latest masterlist revision contains a syntax error, LOOT is using the most recent valid revision instead. Syntax errors are usually minor and fixed within hours."));
+            progress(Progress::UpdatingMasterlist);
+
+            mlUpdated = db->UpdateMasterlist(
+              masterlistPath().string(),
+              m_GameSettings.RepoURL(),
+              m_GameSettings.RepoBranch());
+
+            if (mlUpdated && !db->IsLatestMasterlist(masterlistPath().string(), m_GameSettings.RepoBranch())) {
+                log(loot::LogLevel::error,
+                  "the latest masterlist revision contains a syntax error, "
+                  "LOOT is using the most recent valid revision instead. "
+                  "Syntax errors are usually minor and fixed within hours.");
             }
         }
+
+        progress(Progress::LoadingLists);
 
         fs::path userlist = userlistPath();
+        db->LoadLists(
+          masterlistPath().string(),
+          fs::exists(userlist) ? userlistPath().string() : fs::path());
 
-        m_ProgressStep = "Loading Lists";
-        progress();
-        db->LoadLists(u8path(masterlistPath().string()), fs::exists(userlist) ? u8path(userlistPath().string()) : "");
+        progress(Progress::ReadingPlugins);
+        const std::vector<std::string> pluginsList = getPluginsList(*gameHandle);
 
-        m_ProgressStep = "Reading Plugins";
-        progress();
-        std::vector<std::string> pluginsList;
-        for (fs::directory_iterator it(dataPath()); it != fs::directory_iterator(); ++it) {
-            if (fs::is_regular_file(it->status()) && gameHandle->IsValidPlugin(it->path().filename().string())) {
-                std::string name = it->path().filename().string();
-                BOOST_LOG_TRIVIAL(info) << "Found plugin: " << name;
-
-                pluginsList.push_back(name);
-            }
-        }
-
-        m_ProgressStep = "Sorting Plugins";
-        progress();
-
+        progress(Progress::SortingPlugins);
         gameHandle->LoadCurrentLoadOrderState();
         std::vector<std::string> sortedPlugins = gameHandle->SortPlugins(pluginsList);
 
-        m_ProgressStep = "Writing loadorder.txt";
-        progress();
-        std::ofstream outf(u8path(m_PluginListPath));
+        progress(Progress::WritingLoadorder);
+
+        std::ofstream outf(m_PluginListPath);
         if (!outf) {
-            errorOccured("failed to open " + m_PluginListPath + " to rewrite it");
+            log(loot::LogLevel::error, "failed to open " + m_PluginListPath + " to rewrite it");
             return 1;
         }
         outf << "# This file was automatically generated by Mod Organizer." << std::endl;
@@ -419,67 +353,363 @@ int LOOTWorker::run()
         }
         outf.close();
 
-        ptree report;
+        progress(Progress::ParsingLootMessages);
+        std::ofstream(m_OutputPath) << createJsonReport(*gameHandle, sortedPlugins);
+    }
+    catch(std::system_error& e) {
+      if (e.code().category() == loot::libgit2_category()) {
+        log(loot::LogLevel::error, "A firewall may be blocking LOOT.");
+      }
 
-        m_ProgressStep = "Parsing LOOT Messages";
-        progress();
-        for (size_t i = 0; i < sortedPlugins.size(); ++i) {
-            report.add("name", sortedPlugins[i]);
+      log(loot::LogLevel::error, e.what());
 
-            std::vector<Message> pluginMessages;
-            pluginMessages = db->GetGeneralMessages(true);
-
-            if (!pluginMessages.empty()) {
-                for (Message message : pluginMessages) {
-                    const char* type;
-                    if (message.GetType() == MessageType::say) {
-                        type = "info";
-                    } else if (message.GetType() == MessageType::warn) {
-                        type = "warn";
-                    } else if (message.GetType() == MessageType::error) {
-                        type = "error";
-                    } else {
-                        type = "unknown";
-                        errorOccured((boost::format("invalid message type %1%") % type).str());
-                    }
-                    report.add("messages.type", type);
-                    report.add("messages.message", message.ToSimpleMessage(m_Language).text);
-                }
-            }
-
-            auto metaData = db->GetPluginMetadata(sortedPlugins[i]);
-            if (metaData) {
-                std::set<PluginCleaningData> dirtyInfo = metaData->GetDirtyInfo();
-                for (const auto& element : dirtyInfo) {
-                    report.add("dirty", formatDirty(element));
-                }
-            }
-        }
-
-        std::ofstream buf;
-        buf.open(u8path(m_OutputPath).c_str());
-        write_json(buf, report, false);
+      return 1;
     }
     catch (const std::exception & e) {
-        errorOccured((boost::format("LOOT failed: %1%") % e.what()).str());
+        log(loot::LogLevel::error, e.what());
         return 1;
     }
-    progress("Done!");
+
+    progress(Progress::Done);
 
     return 0;
 }
 
-void LOOTWorker::progress(const std::string & step)
+std::vector<std::string> LOOTWorker::getPluginsList(loot::GameInterface& game) const
 {
-    BOOST_LOG_TRIVIAL(info) << "[progress] " << m_ProgressStep;
-    if (step.size())
-        BOOST_LOG_TRIVIAL(info) << "[detail] " << step;
-    else
-        fflush(stdout);
+  std::vector<std::string> pluginsList;
+
+  // only used for searching files found on the filesystem below
+  std::set<std::string> pluginsListForSearch;
+
+  // read from loadorder.txt
+  std::ifstream in(m_PluginListPath);
+  if (!in) {
+    throw std::runtime_error(
+      "failed to read plugin list '" + m_PluginListPath + "'");
+  }
+
+  std::string line;
+  while (std::getline(in, line)) {
+    boost::trim(line);
+    if (line.empty() || line[0] == '#') {
+      continue;
+    }
+
+    if (!fs::exists(dataPath() / line)) {
+      const auto loadorder = QDir::toNativeSeparators(
+        QFileInfo(QString::fromStdString(m_PluginListPath))
+          .absoluteFilePath()).toStdString();
+
+      const auto data = QDir::toNativeSeparators(
+        QDir(QString::fromStdWString(dataPath().native())).absolutePath())
+          .toStdString();
+
+      log(
+        loot::LogLevel::error,
+        "Plugin '" + line + "' is in the load order file "
+        "'" + loadorder + "' but does not exist on the filesystem "
+        "in '" + data + "'.");
+    }
+
+    log(loot::LogLevel::info, "Found plugin: " + line);
+
+    pluginsListForSearch.insert(line);
+    pluginsList.emplace_back(std::move(line));
+  }
+
+  // check the filesystem for any file that's not in loadorder.txt,
+  // warn if any or found because it's not normal
+
+  for (fs::directory_iterator it(dataPath()); it != fs::directory_iterator(); ++it) {
+    if (!it->is_regular_file()) {
+      // not a file
+      continue;
+    }
+
+    const auto name = it->path().filename().string();
+    if (!game.IsValidPlugin(name)) {
+      // not a valid plugin
+      continue;
+    }
+
+    if (!pluginsListForSearch.contains(name)) {
+      const auto loadorder = QDir::toNativeSeparators(
+        QFileInfo(QString::fromStdString(m_PluginListPath))
+        .absoluteFilePath()).toStdString();
+
+      log(
+        loot::LogLevel::warning,
+        "Plugin '" + it->path().string() + "' was found on the "
+        "filesystem but it was not in '" + loadorder + "'; "
+        "adding to the end.");
+
+      pluginsList.push_back(name);
+    }
+  }
+
+  return pluginsList;
 }
 
-void LOOTWorker::errorOccured(const std::string & message)
+void set(QJsonObject& o, const char* e, const QJsonValue& v)
 {
-    BOOST_LOG_TRIVIAL(error) << message;
-    fflush(stdout);
+  if (v.isObject() && v.toObject().isEmpty()) {
+    return;
+  }
+
+  if (v.isArray() && v.toArray().isEmpty()) {
+    return;
+  }
+
+  if (v.isString() && v.toString().isEmpty()) {
+    return;
+  }
+
+  o[e] = v;
 }
+
+std::string LOOTWorker::createJsonReport(
+  loot::GameInterface& game, const std::vector<std::string>& sortedPlugins) const
+{
+  QJsonObject root;
+
+  set(root, "messages", createMessages(game.GetDatabase()->GetGeneralMessages(true)));
+  set(root, "plugins", createPlugins(game, sortedPlugins));
+
+  const auto end = std::chrono::high_resolution_clock::now();
+
+  set(root, "stats", QJsonObject{
+    {"time", std::chrono::duration_cast<std::chrono::milliseconds>(end - m_startTime).count()},
+    {"lootcliVersion", LOOTCLI_VERSION_STRING},
+    {"lootVersion", QString::fromStdString(loot::LootVersion::GetVersionString())}
+  });
+
+  QJsonDocument doc(root);
+  return doc.toJson(QJsonDocument::Indented).toStdString();
+}
+
+template <class Container>
+QJsonArray createStringArray(const Container& c)
+{
+  QJsonArray array;
+
+  for (auto&& e : c) {
+    array.push_back(QString::fromStdString(e));
+  }
+
+  return array;
+}
+
+QJsonArray LOOTWorker::createPlugins(
+  loot::GameInterface& game,
+  const std::vector<std::string>& sortedPlugins) const
+{
+  QJsonArray plugins;
+
+  for (auto&& pluginName : sortedPlugins) {
+
+    auto plugin = game.GetPlugin(pluginName);
+
+    QJsonObject o;
+    o["name"] = QString::fromStdString(pluginName);
+
+    if (auto metaData=game.GetDatabase()->GetPluginMetadata(pluginName, true, true)) {
+      set(o, "incompatibilities", createIncompatibilities(game, metaData->GetIncompatibilities()));
+      set(o, "messages", createMessages(metaData->GetMessages()));
+      set(o, "dirty", createDirty(metaData->GetDirtyInfo()));
+      set(o, "clean", createClean(metaData->GetCleanInfo()));
+    }
+
+    set(o, "missingMasters", createMissingMasters(game, pluginName));
+
+    if (plugin->LoadsArchive()) {
+      o["loadsArchive"] = true;
+    }
+
+    if (plugin->IsMaster()) {
+      o["isMaster"] = true;
+    }
+
+    if (plugin->IsLightMaster()) {
+      o["isLightMaster"] = true;
+    }
+
+    // don't add if the name is the only thing in there
+    if (o.size() > 1) {
+      plugins.push_back(o);
+    }
+  }
+
+  return plugins;
+}
+
+QJsonValue LOOTWorker::createMessages(const std::vector<loot::Message>& list) const
+{
+  QJsonArray messages;
+
+  for (loot::Message m : list) {
+    messages.push_back(QJsonObject{
+      {"type", QString::fromStdString(toString(m.GetType()))},
+      {"text", QString::fromStdString(m.ToSimpleMessage(m_Language).text)}
+    });
+  }
+
+  return messages;
+}
+
+QJsonValue LOOTWorker::createDirty(
+  const std::set<loot::PluginCleaningData>& data) const
+{
+  QJsonArray array;
+
+  for (const auto& d : data) {
+    QJsonObject o{
+      {"crc", static_cast<qint64>(d.GetCRC())},
+      {"itm", static_cast<qint64>(d.GetITMCount())},
+      {"deletedReferences", static_cast<qint64>(d.GetDeletedReferenceCount())},
+      {"deletedNavmesh", static_cast<qint64>(d.GetDeletedNavmeshCount())},
+    };
+
+    set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
+    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetInfo()).ToSimpleMessage(m_Language).text));
+
+    array.push_back(o);
+  }
+
+  return array;
+}
+
+QJsonValue LOOTWorker::createClean(
+  const std::set<loot::PluginCleaningData>& data) const
+{
+  QJsonArray array;
+
+  for (const auto& d : data) {
+    QJsonObject o{
+      {"crc", static_cast<qint64>(d.GetCRC())},
+    };
+
+    set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
+    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetInfo()).ToSimpleMessage(m_Language).text));
+
+    array.push_back(o);
+  }
+
+  return array;
+}
+
+
+QJsonValue LOOTWorker::createIncompatibilities(
+  loot::GameInterface& game, const std::set<loot::File>& data) const
+{
+  QJsonArray array;
+
+  for (auto&& f : data) {
+    const auto n = f.GetName();
+    if (!game.GetPlugin(n)) {
+      continue;
+    }
+
+    const auto name = QString::fromStdString(n);
+    const auto displayName = QString::fromStdString(f.GetDisplayName());
+
+    QJsonObject o{
+      {"name", name}
+    };
+
+    if (displayName != name) {
+      set(o, "displayName", displayName);
+    }
+
+    array.push_back(std::move(o));
+  }
+
+  return array;
+}
+
+QJsonValue LOOTWorker::createMissingMasters(
+  loot::GameInterface& game, const std::string& pluginName) const
+{
+  QJsonArray array;
+
+  for (auto&& master : game.GetPlugin(pluginName)->GetMasters()) {
+    if (!game.GetPlugin(master)) {
+      array.push_back(QString::fromStdString(master));
+    }
+  }
+
+  return array;
+}
+
+void LOOTWorker::progress(Progress p)
+{
+  std::cout << "[progress] " << static_cast<int>(p) << "\n";
+  std::cout.flush();
+}
+
+std::string escapeNewlines(const std::string& s)
+{
+  auto ss = boost::replace_all_copy(s, "\n", "\\n");
+  boost::replace_all(ss, "\r", "\\r");
+  return ss;
+}
+
+void LOOTWorker::log(loot::LogLevel level, const std::string& message) const
+{
+  if (level < m_LogLevel) {
+    return;
+  }
+
+  const auto ll = fromLootLogLevel(level);
+  const auto levelName = logLevelToString(ll);
+
+  std::cout << "[" << levelName << "] " << escapeNewlines(message) << "\n";
+  std::cout.flush();
+}
+
+
+loot::LogLevel toLootLogLevel(lootcli::LogLevels level)
+{
+  using L = loot::LogLevel;
+  using LC = lootcli::LogLevels;
+
+  switch (level)
+  {
+    case LC::Trace:   return L::trace;
+    case LC::Debug:   return L::debug;
+    case LC::Info:    return L::info;
+    case LC::Warning: return L::warning;
+    case LC::Error:   return L::error;
+    default:          return L::info;
+  }
+}
+
+lootcli::LogLevels fromLootLogLevel(loot::LogLevel level)
+{
+  using L = loot::LogLevel;
+  using LC = lootcli::LogLevels;
+
+  switch (level)
+  {
+    case L::trace:
+      return LC::Trace;
+
+    case L::debug:
+      return LC::Debug;
+
+    case L::info:
+      return LC::Info;
+
+    case L::warning:
+      return LC::Warning;
+
+    case L::error:  // fall-through
+    case L::fatal:
+      return LC::Error;
+
+    default:
+      return LC::Info;
+  }
+}
+
+} // namespace
