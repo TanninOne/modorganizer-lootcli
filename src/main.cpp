@@ -50,7 +50,7 @@ loot::LogLevel getLogLevel(const std::vector<std::string>& arguments)
   return lootcli::toLootLogLevel(level);
 }
 
-int WinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
+int wWinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
 {
   _setmode(_fileno(stdout), _O_BINARY);
   setlocale(LC_ALL, "en.UTF-8");
