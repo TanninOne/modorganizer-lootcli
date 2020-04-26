@@ -1,24 +1,8 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.16)
 
-ADD_COMPILE_OPTIONS(
-	$<$<CXX_COMPILER_ID:MSVC>:/MP>
-	$<$<CXX_COMPILER_ID:MSVC>:/Wall>
-	$<$<CXX_COMPILER_ID:MSVC>:/permissive->
-	$<$<CXX_COMPILER_ID:MSVC>:/wd4464>  # relative path for include
-	$<$<CXX_COMPILER_ID:MSVC>:$<$<CONFIG:RELEASE>:/O2>>
-	$<$<CXX_COMPILER_ID:MSVC>:$<$<CONFIG:RELWITHDEBINFO>:/O2>>)
+project(lootcli)
+set(project_type exe)
+set(install_dir bin/loot)
 
-SET(PROJ_NAME lootcli)
-
-PROJECT(${PROJ_NAME})
-
-# sets lootcli as StartUp Project in Visual Studio
-set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY VS_STARTUP_PROJECT "lootcli")
-
-set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
-set(CMAKE_INSTALL_MESSAGE NEVER)
-
-SET(DEPENDENCIES_DIR CACHE PATH "")
-LIST(APPEND CMAKE_PREFIX_PATH ${QT_ROOT}/lib/cmake)
-
-ADD_SUBDIRECTORY(src)
+include(../cmake_common/project.cmake)
+add_subdirectory(src)
