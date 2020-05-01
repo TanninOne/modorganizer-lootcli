@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
-include(../../cmake_common/src.cmake)
-
+if(DEFINED DEPENDENCIES_DIR)
+	include(${DEPENDENCIES_DIR}/modorganizer_super/cmake_common/src.cmake)
+else()
+	include(../../cmake_common/src.cmake)
+endif()
 set(header_files ${header_files} ../include/lootcli/lootcli.h)
 requires_library(loot cpptoml)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
