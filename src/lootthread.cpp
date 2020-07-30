@@ -558,7 +558,7 @@ QJsonValue LOOTWorker::createMessages(const std::vector<loot::Message>& list) co
 }
 
 QJsonValue LOOTWorker::createDirty(
-  const std::set<loot::PluginCleaningData>& data) const
+  const std::vector<loot::PluginCleaningData>& data) const
 {
   QJsonArray array;
 
@@ -580,7 +580,7 @@ QJsonValue LOOTWorker::createDirty(
 }
 
 QJsonValue LOOTWorker::createClean(
-  const std::set<loot::PluginCleaningData>& data) const
+  const std::vector<loot::PluginCleaningData>& data) const
 {
   QJsonArray array;
 
@@ -600,12 +600,12 @@ QJsonValue LOOTWorker::createClean(
 
 
 QJsonValue LOOTWorker::createIncompatibilities(
-  loot::GameInterface& game, const std::set<loot::File>& data) const
+  loot::GameInterface& game, const std::vector<loot::File>& data) const
 {
   QJsonArray array;
 
   for (auto&& f : data) {
-    const auto n = f.GetName();
+    const auto n = static_cast<std::string>(f.GetName());
     if (!game.GetPlugin(n)) {
       continue;
     }
