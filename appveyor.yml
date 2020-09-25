@@ -14,7 +14,7 @@ build_script:
 
     cd c:\projects\modorganizer-umbrella
     
-    ($env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH -eq $null) ? $branch = $env:APPVEYOR_REPO_BRANCH : $branch = $env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH
+    ($env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH -eq $null) ? ($branch = $env:APPVEYOR_REPO_BRANCH) : ($branch = $env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH)
 
     git checkout $(git show-ref --verify --quiet refs/remotes/origin/${branch} || echo '-b') ${branch}
 
