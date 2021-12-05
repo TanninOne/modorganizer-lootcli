@@ -313,12 +313,13 @@ int LOOTWorker::run()
 
             progress(Progress::UpdatingMasterlist);
 
-            mlUpdated = db->UpdateMasterlist(
+            mlUpdated = loot::UpdateFile(
               masterlistPath().string(),
               m_GameSettings.RepoURL(),
-              m_GameSettings.RepoBranch());
+              m_GameSettings.RepoBranch()
+            );
 
-            if (mlUpdated && !db->IsLatestMasterlist(masterlistPath().string(), m_GameSettings.RepoBranch())) {
+            if (mlUpdated && !loot::IsLatestFile(masterlistPath().string(), m_GameSettings.RepoBranch())) {
                 log(loot::LogLevel::error,
                   "the latest masterlist revision contains a syntax error, "
                   "LOOT is using the most recent valid revision instead. "
@@ -530,7 +531,7 @@ QJsonArray LOOTWorker::createPlugins(
       o["isMaster"] = true;
     }
 
-    if (plugin->IsLightMaster()) {
+    if (plugin->IsLightPlugin()) {
       o["isLightMaster"] = true;
     }
 
@@ -548,10 +549,13 @@ QJsonValue LOOTWorker::createMessages(const std::vector<loot::Message>& list) co
   QJsonArray messages;
 
   for (loot::Message m : list) {
-    messages.push_back(QJsonObject{
-      {"type", QString::fromStdString(toString(m.GetType()))},
-      {"text", QString::fromStdString(m.ToSimpleMessage(m_Language).text)}
-    });
+      auto simpleMessage = m.ToSimpleMessage(m_Language);
+      if (simpleMessage.has_value()) {
+          messages.push_back(QJsonObject{
+              {"type", QString::fromStdString(toString(m.GetType()))},
+              {"text", QString::fromStdString(simpleMessage.value().text)}
+              });
+      }
   }
 
   return messages;
@@ -571,7 +575,12 @@ QJsonValue LOOTWorker::createDirty(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetInfo()).ToSimpleMessage(m_Language).text));
+    auto simpleMessage = loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language);
+    if (simpleMessage.has_value()) {
+        set(o, "info", QString::fromStdString(simpleMessage.value().text));
+    } else {
+        set(o, "info", QString::fromStdString(""));
+    }
 
     array.push_back(o);
   }
@@ -590,7 +599,13 @@ QJsonValue LOOTWorker::createClean(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetInfo()).ToSimpleMessage(m_Language).text));
+    auto simpleMessage = loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language);
+    if (simpleMessage.has_value()) {
+        set(o, "info", QString::fromStdString(simpleMessage.value().text));
+    }
+    else {
+        set(o, "info", QString::fromStdString(""));
+    }
 
     array.push_back(o);
   }
