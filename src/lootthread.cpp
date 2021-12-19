@@ -157,6 +157,17 @@ void LOOTWorker::getSettings(const fs::path& file) {
                     throw std::runtime_error("'folder' key missing from game settings table");
                 }
 
+                if (*type == "SkyrimSE" && *folder == *type) {
+                    type = cpptoml::option<std::string>(
+                        GameSettings(GameType::tes5se).FolderName());
+                    folder = type;
+
+                    auto path = GetLOOTAppData() / "SkyrimSE";
+                    if (fs::exists(path)) {
+                        fs::rename(path, GetLOOTAppData() / fs::path(*folder));
+                    }
+                }
+
                 if (*type == GameSettings(GameType::tes3).FolderName()) {
                     newSettings = GameSettings(GameType::tes3, *folder);
                 } else if (*type == GameSettings(GameType::tes4).FolderName()) {
@@ -204,28 +215,38 @@ void LOOTWorker::getSettings(const fs::path& file) {
                     auto branch = game->get_as<std::string>("branch");
                     if (branch) {
                         newSettings.SetRepoBranch(*branch);
-
-                        auto defaultGame = GameSettings(newSettings.Type());
-                        if (newSettings.RepoURL() == defaultGame.RepoURL() &&
-                            newSettings.IsRepoBranchOldDefault()) {
-                            newSettings.SetRepoBranch(defaultGame.RepoBranch());
-                        }
                     }
 
                     auto path = game->get_as<std::string>("path");
                     if (path) {
-                        newSettings.SetGamePath(*path);
+                        newSettings.SetGamePath(fs::path(*path));
                     }
 
                     auto localPath = game->get_as<std::string>("local_path");
-                    if (localPath) {
-                        newSettings.SetGameLocalPath(*localPath);
+                    auto localFolder = game->get_as<std::string>("local_folder");
+                    if (localPath && localFolder) {
+                        throw std::runtime_error(
+                            "Game settings have local_path and local_folder set, use only one.");
+                    }
+                    else if (localPath) {
+                        newSettings.SetGameLocalPath(fs::path(*localPath));
+                    }
+                    else if (localFolder) {
+                        newSettings.SetGameLocalFolder(*localFolder);
                     }
 
-                    auto registry = game->get_as<std::string>("registry");
+                    auto registry = game->get_array_of<std::string>("registry");
                     if (registry) {
-                        newSettings.SetRegistryKey(*registry);
+                        newSettings.SetRegistryKeys(*registry);
                     }
+                    else {
+                        auto registry = game->get_as<std::string>("registry");
+                        if (registry) {
+                            newSettings.SetRegistryKeys({ *registry });
+                        }
+                    }
+
+                    newSettings.MigrateSettings();
 
                     m_GameSettings = newSettings;
                     break;
