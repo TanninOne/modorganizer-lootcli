@@ -313,12 +313,12 @@ int LOOTWorker::run()
 
             progress(Progress::UpdatingMasterlist);
 
-            mlUpdated = db->UpdateMasterlist(
+            mlUpdated = loot::UpdateFile(
               masterlistPath().string(),
               m_GameSettings.RepoURL(),
               m_GameSettings.RepoBranch());
 
-            if (mlUpdated && !db->IsLatestMasterlist(masterlistPath().string(), m_GameSettings.RepoBranch())) {
+            if (mlUpdated && !loot::IsLatestFile(masterlistPath().string(), m_GameSettings.RepoBranch())) {
                 log(loot::LogLevel::error,
                   "the latest masterlist revision contains a syntax error, "
                   "LOOT is using the most recent valid revision instead. "
@@ -530,8 +530,8 @@ QJsonArray LOOTWorker::createPlugins(
       o["isMaster"] = true;
     }
 
-    if (plugin->IsLightMaster()) {
-      o["isLightMaster"] = true;
+    if (plugin->IsLightPlugin()) {
+      o["isLighter"] = true;
     }
 
     // don't add if the name is the only thing in there
@@ -550,7 +550,7 @@ QJsonValue LOOTWorker::createMessages(const std::vector<loot::Message>& list) co
   for (loot::Message m : list) {
     messages.push_back(QJsonObject{
       {"type", QString::fromStdString(toString(m.GetType()))},
-      {"text", QString::fromStdString(m.ToSimpleMessage(m_Language).text)}
+      {"text", QString::fromStdString(m.ToSimpleMessage(m_Language).value_or(loot::SimpleMessage()).text)}
     });
   }
 
@@ -571,7 +571,7 @@ QJsonValue LOOTWorker::createDirty(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetInfo()).ToSimpleMessage(m_Language).text));
+    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language).value_or(loot::SimpleMessage()).text));
 
     array.push_back(o);
   }
@@ -590,7 +590,7 @@ QJsonValue LOOTWorker::createClean(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetInfo()).ToSimpleMessage(m_Language).text));
+    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language).value_or(loot::SimpleMessage()).text));
 
     array.push_back(o);
   }
