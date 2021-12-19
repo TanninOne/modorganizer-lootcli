@@ -335,10 +335,10 @@ int LOOTWorker::run()
           fs::exists(userlist) ? userlistPath().string() : fs::path());
 
         progress(Progress::ReadingPlugins);
-        const std::vector<std::string> pluginsList = getPluginsList(*gameHandle);
+        gameHandle->LoadCurrentLoadOrderState();
+        const std::vector<std::string> pluginsList = gameHandle->GetLoadOrder();
 
         progress(Progress::SortingPlugins);
-        gameHandle->LoadCurrentLoadOrderState();
         std::vector<std::string> sortedPlugins = gameHandle->SortPlugins(pluginsList);
 
         progress(Progress::WritingLoadorder);
@@ -374,82 +374,6 @@ int LOOTWorker::run()
     progress(Progress::Done);
 
     return 0;
-}
-
-std::vector<std::string> LOOTWorker::getPluginsList(loot::GameInterface& game) const
-{
-  std::vector<std::string> pluginsList;
-
-  // only used for searching files found on the filesystem below
-  std::set<std::string> pluginsListForSearch;
-
-  // read from loadorder.txt
-  std::ifstream in(m_PluginListPath);
-  if (!in) {
-    throw std::runtime_error(
-      "failed to read plugin list '" + m_PluginListPath + "'");
-  }
-
-  std::string line;
-  while (std::getline(in, line)) {
-    boost::trim(line);
-    if (line.empty() || line[0] == '#') {
-      continue;
-    }
-
-    if (!fs::exists(dataPath() / line)) {
-      const auto loadorder = QDir::toNativeSeparators(
-        QFileInfo(QString::fromStdString(m_PluginListPath))
-          .absoluteFilePath()).toStdString();
-
-      const auto data = QDir::toNativeSeparators(
-        QDir(QString::fromStdWString(dataPath().native())).absolutePath())
-          .toStdString();
-
-      log(
-        loot::LogLevel::error,
-        "Plugin '" + line + "' is in the load order file "
-        "'" + loadorder + "' but does not exist on the filesystem "
-        "in '" + data + "'.");
-    }
-
-    log(loot::LogLevel::info, "Found plugin: " + line);
-
-    pluginsListForSearch.insert(line);
-    pluginsList.emplace_back(std::move(line));
-  }
-
-  // check the filesystem for any file that's not in loadorder.txt,
-  // warn if any or found because it's not normal
-
-  for (fs::directory_iterator it(dataPath()); it != fs::directory_iterator(); ++it) {
-    if (!it->is_regular_file()) {
-      // not a file
-      continue;
-    }
-
-    const auto name = it->path().filename().string();
-    if (!game.IsValidPlugin(name)) {
-      // not a valid plugin
-      continue;
-    }
-
-    if (!pluginsListForSearch.contains(name)) {
-      const auto loadorder = QDir::toNativeSeparators(
-        QFileInfo(QString::fromStdString(m_PluginListPath))
-        .absoluteFilePath()).toStdString();
-
-      log(
-        loot::LogLevel::warning,
-        "Plugin '" + it->path().string() + "' was found on the "
-        "filesystem but it was not in '" + loadorder + "'; "
-        "adding to the end.");
-
-      pluginsList.push_back(name);
-    }
-  }
-
-  return pluginsList;
 }
 
 void set(QJsonObject& o, const char* e, const QJsonValue& v)

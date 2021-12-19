@@ -63,8 +63,6 @@ private:
   loot::GameSettings m_GameSettings;
   std::chrono::high_resolution_clock::time_point m_startTime;
 
-  std::vector<std::string> getPluginsList(loot::GameInterface& game) const;
-
   std::string createJsonReport(
     loot::GameInterface& game,
     const std::vector<std::string>& sortedPlugins) const;
