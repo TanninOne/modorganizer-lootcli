@@ -157,6 +157,17 @@ void LOOTWorker::getSettings(const fs::path& file) {
                     throw std::runtime_error("'folder' key missing from game settings table");
                 }
 
+                if (*type == "SkyrimSE" && *folder == *type) {
+                    type = cpptoml::option<std::string>(
+                        GameSettings(GameType::tes5se).FolderName());
+                    folder = type;
+
+                    auto path = GetLOOTAppData() / "SkyrimSE";
+                    if (fs::exists(path)) {
+                        fs::rename(path, GetLOOTAppData() / fs::path(*folder));
+                    }
+                }
+
                 if (*type == GameSettings(GameType::tes3).FolderName()) {
                     newSettings = GameSettings(GameType::tes3, *folder);
                 } else if (*type == GameSettings(GameType::tes4).FolderName()) {
@@ -204,28 +215,38 @@ void LOOTWorker::getSettings(const fs::path& file) {
                     auto branch = game->get_as<std::string>("branch");
                     if (branch) {
                         newSettings.SetRepoBranch(*branch);
-
-                        auto defaultGame = GameSettings(newSettings.Type());
-                        if (newSettings.RepoURL() == defaultGame.RepoURL() &&
-                            newSettings.IsRepoBranchOldDefault()) {
-                            newSettings.SetRepoBranch(defaultGame.RepoBranch());
-                        }
                     }
 
                     auto path = game->get_as<std::string>("path");
                     if (path) {
-                        newSettings.SetGamePath(*path);
+                        newSettings.SetGamePath(fs::path(*path));
                     }
 
                     auto localPath = game->get_as<std::string>("local_path");
-                    if (localPath) {
-                        newSettings.SetGameLocalPath(*localPath);
+                    auto localFolder = game->get_as<std::string>("local_folder");
+                    if (localPath && localFolder) {
+                        throw std::runtime_error(
+                            "Game settings have local_path and local_folder set, use only one.");
+                    }
+                    else if (localPath) {
+                        newSettings.SetGameLocalPath(fs::path(*localPath));
+                    }
+                    else if (localFolder) {
+                        newSettings.SetGameLocalFolder(*localFolder);
                     }
 
-                    auto registry = game->get_as<std::string>("registry");
+                    auto registry = game->get_array_of<std::string>("registry");
                     if (registry) {
-                        newSettings.SetRegistryKey(*registry);
+                        newSettings.SetRegistryKeys(*registry);
                     }
+                    else {
+                        auto registry = game->get_as<std::string>("registry");
+                        if (registry) {
+                            newSettings.SetRegistryKeys({ *registry });
+                        }
+                    }
+
+                    newSettings.MigrateSettings();
 
                     m_GameSettings = newSettings;
                     break;
@@ -316,7 +337,8 @@ int LOOTWorker::run()
             mlUpdated = loot::UpdateFile(
               masterlistPath().string(),
               m_GameSettings.RepoURL(),
-              m_GameSettings.RepoBranch());
+              m_GameSettings.RepoBranch()
+            );
 
             if (mlUpdated && !loot::IsLatestFile(masterlistPath().string(), m_GameSettings.RepoBranch())) {
                 log(loot::LogLevel::error,
@@ -334,10 +356,10 @@ int LOOTWorker::run()
           fs::exists(userlist) ? userlistPath().string() : fs::path());
 
         progress(Progress::ReadingPlugins);
-        const std::vector<std::string> pluginsList = getPluginsList(*gameHandle);
+        gameHandle->LoadCurrentLoadOrderState();
+        const std::vector<std::string> pluginsList = gameHandle->GetLoadOrder();
 
         progress(Progress::SortingPlugins);
-        gameHandle->LoadCurrentLoadOrderState();
         std::vector<std::string> sortedPlugins = gameHandle->SortPlugins(pluginsList);
 
         progress(Progress::WritingLoadorder);
@@ -373,82 +395,6 @@ int LOOTWorker::run()
     progress(Progress::Done);
 
     return 0;
-}
-
-std::vector<std::string> LOOTWorker::getPluginsList(loot::GameInterface& game) const
-{
-  std::vector<std::string> pluginsList;
-
-  // only used for searching files found on the filesystem below
-  std::set<std::string> pluginsListForSearch;
-
-  // read from loadorder.txt
-  std::ifstream in(m_PluginListPath);
-  if (!in) {
-    throw std::runtime_error(
-      "failed to read plugin list '" + m_PluginListPath + "'");
-  }
-
-  std::string line;
-  while (std::getline(in, line)) {
-    boost::trim(line);
-    if (line.empty() || line[0] == '#') {
-      continue;
-    }
-
-    if (!fs::exists(dataPath() / line)) {
-      const auto loadorder = QDir::toNativeSeparators(
-        QFileInfo(QString::fromStdString(m_PluginListPath))
-          .absoluteFilePath()).toStdString();
-
-      const auto data = QDir::toNativeSeparators(
-        QDir(QString::fromStdWString(dataPath().native())).absolutePath())
-          .toStdString();
-
-      log(
-        loot::LogLevel::error,
-        "Plugin '" + line + "' is in the load order file "
-        "'" + loadorder + "' but does not exist on the filesystem "
-        "in '" + data + "'.");
-    }
-
-    log(loot::LogLevel::info, "Found plugin: " + line);
-
-    pluginsListForSearch.insert(line);
-    pluginsList.emplace_back(std::move(line));
-  }
-
-  // check the filesystem for any file that's not in loadorder.txt,
-  // warn if any or found because it's not normal
-
-  for (fs::directory_iterator it(dataPath()); it != fs::directory_iterator(); ++it) {
-    if (!it->is_regular_file()) {
-      // not a file
-      continue;
-    }
-
-    const auto name = it->path().filename().string();
-    if (!game.IsValidPlugin(name)) {
-      // not a valid plugin
-      continue;
-    }
-
-    if (!pluginsListForSearch.contains(name)) {
-      const auto loadorder = QDir::toNativeSeparators(
-        QFileInfo(QString::fromStdString(m_PluginListPath))
-        .absoluteFilePath()).toStdString();
-
-      log(
-        loot::LogLevel::warning,
-        "Plugin '" + it->path().string() + "' was found on the "
-        "filesystem but it was not in '" + loadorder + "'; "
-        "adding to the end.");
-
-      pluginsList.push_back(name);
-    }
-  }
-
-  return pluginsList;
 }
 
 void set(QJsonObject& o, const char* e, const QJsonValue& v)
@@ -531,7 +477,7 @@ QJsonArray LOOTWorker::createPlugins(
     }
 
     if (plugin->IsLightPlugin()) {
-      o["isLighter"] = true;
+      o["isLightMaster"] = true;
     }
 
     // don't add if the name is the only thing in there
@@ -548,10 +494,13 @@ QJsonValue LOOTWorker::createMessages(const std::vector<loot::Message>& list) co
   QJsonArray messages;
 
   for (loot::Message m : list) {
-    messages.push_back(QJsonObject{
-      {"type", QString::fromStdString(toString(m.GetType()))},
-      {"text", QString::fromStdString(m.ToSimpleMessage(m_Language).value_or(loot::SimpleMessage()).text)}
-    });
+      auto simpleMessage = m.ToSimpleMessage(m_Language);
+      if (simpleMessage.has_value()) {
+          messages.push_back(QJsonObject{
+              {"type", QString::fromStdString(toString(m.GetType()))},
+              {"text", QString::fromStdString(simpleMessage.value().text)}
+              });
+      }
   }
 
   return messages;
@@ -571,7 +520,12 @@ QJsonValue LOOTWorker::createDirty(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language).value_or(loot::SimpleMessage()).text));
+    auto simpleMessage = loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language);
+    if (simpleMessage.has_value()) {
+        set(o, "info", QString::fromStdString(simpleMessage.value().text));
+    } else {
+        set(o, "info", QString::fromStdString(""));
+    }
 
     array.push_back(o);
   }
@@ -590,7 +544,13 @@ QJsonValue LOOTWorker::createClean(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    set(o, "info", QString::fromStdString(loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language).value_or(loot::SimpleMessage()).text));
+    auto simpleMessage = loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language);
+    if (simpleMessage.has_value()) {
+        set(o, "info", QString::fromStdString(simpleMessage.value().text));
+    }
+    else {
+        set(o, "info", QString::fromStdString(""));
+    }
 
     array.push_back(o);
   }
