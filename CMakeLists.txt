@@ -1,13 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(lootcli)
-set(project_type exe)
-set(install_dir bin/loot)
-set(create_translations OFF)
-
 if(DEFINED DEPENDENCIES_DIR)
-	include(${DEPENDENCIES_DIR}/modorganizer_super/cmake_common/project.cmake)
+	include(${DEPENDENCIES_DIR}/modorganizer_super/cmake_common/mo2.cmake)
 else()
-	include(../cmake_common/project.cmake)
+	include(${CMAKE_CURRENT_LIST_DIR}/../cmake_common/mo2.cmake)
 endif()
+
+project(lootcli)
 add_subdirectory(src)

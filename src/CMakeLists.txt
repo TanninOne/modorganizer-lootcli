@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
-if(DEFINED DEPENDENCIES_DIR)
-	include(${DEPENDENCIES_DIR}/modorganizer_super/cmake_common/src.cmake)
-else()
-	include(../../cmake_common/src.cmake)
-endif()
-set(header_files ${header_files} ../include/lootcli/lootcli.h)
-requires_library(loot cpptoml)
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
+
+add_executable(lootcli WIN32)
+
+mo2_configure_executable(lootcli
+	WARNINGS OFF
+	TRANSLATIONS OFF
+	PRIVATE_DEPENDS boost Qt::Core loot cpptoml)
+target_include_directories(lootcli
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+
+mo2_install_target(lootcli INSTALLDIR bin/loot)
