@@ -112,12 +112,12 @@ fs::path GetLOOTAppData() {
 
 fs::path LOOTWorker::masterlistPath() const
 {
-    return GetLOOTAppData() / m_GameSettings.FolderName() / "masterlist.yaml";
+    return GetLOOTAppData() / "games" / m_GameSettings.FolderName() / "masterlist.yaml";
 }
 
 fs::path LOOTWorker::userlistPath() const
 {
-    return GetLOOTAppData() / m_GameSettings.FolderName() / "userlist.yaml";
+    return GetLOOTAppData() / "games" / m_GameSettings.FolderName() / "userlist.yaml";
 }
 fs::path LOOTWorker::settingsPath() const
 {
@@ -136,8 +136,13 @@ fs::path LOOTWorker::dataPath() const
 
 void LOOTWorker::getSettings(const fs::path& file) {
     lock_guard<recursive_mutex> guard(mutex_);
+    // Don't use cpptoml::parse_file() as it just uses a std stream,
+    // which don't support UTF-8 paths on Windows.
+    std::ifstream in(file);
+    if (!in.is_open())
+        throw cpptoml::parse_exception(file.string() + " could not be opened for parsing");
 
-    auto settings = cpptoml::parse_file(file.string());
+    const auto settings = cpptoml::parser(in).parse();
     auto games = settings->get_table_array("games");
     if (games) {
         for (const auto& game : *games) {
@@ -260,7 +265,7 @@ void LOOTWorker::getSettings(const fs::path& file) {
 
     if (m_Language.empty()) {
       m_Language = settings->get_as<std::string>("language")
-        .value_or(loot::MessageContent::defaultLanguage);
+        .value_or(loot::MessageContent::DEFAULT_LANGUAGE);
     }
 }
 
@@ -316,7 +321,7 @@ int LOOTWorker::run()
 
         m_GameSettings.SetGamePath(m_GamePath);
 
-        if (m_Language != loot::MessageContent::defaultLanguage) {
+        if (m_Language != loot::MessageContent::DEFAULT_LANGUAGE) {
           log(loot::LogLevel::debug, "initialising language settings");
           log(loot::LogLevel::debug, "selected language: " + m_Language);
 
@@ -351,7 +356,7 @@ int LOOTWorker::run()
         progress(Progress::LoadingLists);
 
         fs::path userlist = userlistPath();
-        db->LoadLists(
+        db.LoadLists(
           masterlistPath().string(),
           fs::exists(userlist) ? userlistPath().string() : fs::path());
 
@@ -419,7 +424,7 @@ std::string LOOTWorker::createJsonReport(
 {
   QJsonObject root;
 
-  set(root, "messages", createMessages(game.GetDatabase()->GetGeneralMessages(true)));
+  set(root, "messages", createMessages(game.GetDatabase().GetGeneralMessages(true)));
   set(root, "plugins", createPlugins(game, sortedPlugins));
 
   const auto end = std::chrono::high_resolution_clock::now();
@@ -427,7 +432,7 @@ std::string LOOTWorker::createJsonReport(
   set(root, "stats", QJsonObject{
     {"time", std::chrono::duration_cast<std::chrono::milliseconds>(end - m_startTime).count()},
     {"lootcliVersion", LOOTCLI_VERSION_STRING},
-    {"lootVersion", QString::fromStdString(loot::LootVersion::GetVersionString())}
+    {"lootVersion", QString::fromStdString(loot::GetLiblootVersion())}
   });
 
   QJsonDocument doc(root);
@@ -459,7 +464,7 @@ QJsonArray LOOTWorker::createPlugins(
     QJsonObject o;
     o["name"] = QString::fromStdString(pluginName);
 
-    if (auto metaData=game.GetDatabase()->GetPluginMetadata(pluginName, true, true)) {
+    if (auto metaData=game.GetDatabase().GetPluginMetadata(pluginName, true, true)) {
       set(o, "incompatibilities", createIncompatibilities(game, metaData->GetIncompatibilities()));
       set(o, "messages", createMessages(metaData->GetMessages()));
       set(o, "dirty", createDirty(metaData->GetDirtyInfo()));
@@ -494,7 +499,7 @@ QJsonValue LOOTWorker::createMessages(const std::vector<loot::Message>& list) co
   QJsonArray messages;
 
   for (loot::Message m : list) {
-      auto simpleMessage = m.ToSimpleMessage(m_Language);
+      auto simpleMessage = loot::ToSimpleMessage(m, m_Language);
       if (simpleMessage.has_value()) {
           messages.push_back(QJsonObject{
               {"type", QString::fromStdString(toString(m.GetType()))},
@@ -520,7 +525,7 @@ QJsonValue LOOTWorker::createDirty(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    auto simpleMessage = loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language);
+    auto simpleMessage = loot::ToSimpleMessage(loot::Message(loot::MessageType::say, d.GetDetail()), m_Language);
     if (simpleMessage.has_value()) {
         set(o, "info", QString::fromStdString(simpleMessage.value().text));
     } else {
@@ -544,7 +549,7 @@ QJsonValue LOOTWorker::createClean(
     };
 
     set(o, "cleaningUtility", QString::fromStdString(d.GetCleaningUtility()));
-    auto simpleMessage = loot::Message(loot::MessageType::say, d.GetDetail()).ToSimpleMessage(m_Language);
+    auto simpleMessage = loot::ToSimpleMessage(loot::Message(loot::MessageType::say, d.GetDetail()), m_Language);
     if (simpleMessage.has_value()) {
         set(o, "info", QString::fromStdString(simpleMessage.value().text));
     }
