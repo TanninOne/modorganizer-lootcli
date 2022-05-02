@@ -77,7 +77,7 @@ namespace loot {
 							 "1435828767_is1\\InstallLocation" };
 			lootFolderName_ = "Morrowind";
 			masterFile_ = "Morrowind.esm";
-			mininumHeaderVersion_ = MORROWIND_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = MORROWIND_MINIMUM_HEADER_VERSION;
 		} else if (Type() == GameType::tes4) {
 			name_ = "TES IV: Oblivion";
 			registryKeys_ = { "Software\\Bethesda Softworks\\Oblivion\\Installed Path",
@@ -93,7 +93,7 @@ namespace loot {
 							 "1458058109_is1\\InstallLocation" };
 			lootFolderName_ = "Oblivion";
 			masterFile_ = "Oblivion.esm";
-			mininumHeaderVersion_ = OBLIVION_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = OBLIVION_MINIMUM_HEADER_VERSION;
 		} else if (Type() == GameType::tes5) {
 			name_ = "TES V: Skyrim";
 			registryKeys_ = { "Software\\Bethesda Softworks\\Skyrim\\Installed Path",
@@ -101,7 +101,7 @@ namespace loot {
 							 "Steam App 72850\\InstallLocation" };
 			lootFolderName_ = "Skyrim";
 			masterFile_ = "Skyrim.esm";
-			mininumHeaderVersion_ = SKYRIM_FO3_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = SKYRIM_FO3_MINIMUM_HEADER_VERSION;
 		} else if (Type() == GameType::tes5se) {
 			name_ = "TES V: Skyrim Special Edition";
 			registryKeys_ = {
@@ -110,7 +110,7 @@ namespace loot {
 				"489830\\InstallLocation" };
 			lootFolderName_ = "Skyrim Special Edition";
 			masterFile_ = "Skyrim.esm";
-			mininumHeaderVersion_ = SKYRIM_SE_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = SKYRIM_SE_MINIMUM_HEADER_VERSION;
 		} else if (Type() == GameType::tes5vr) {
 			name_ = "TES V: Skyrim VR";
 			registryKeys_ = { "Software\\Bethesda Softworks\\Skyrim VR\\Installed Path",
@@ -118,7 +118,7 @@ namespace loot {
 							 "Steam App 611670\\InstallLocation" };
 			lootFolderName_ = "Skyrim VR";
 			masterFile_ = "Skyrim.esm";
-			mininumHeaderVersion_ = SKYRIM_SE_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = SKYRIM_SE_MINIMUM_HEADER_VERSION;
 		} else if (Type() == GameType::fo3) {
 			name_ = "Fallout 3";
 			registryKeys_ = { "Software\\Bethesda Softworks\\Fallout3\\Installed Path",
@@ -134,7 +134,7 @@ namespace loot {
 							 "1248282609_is1\\InstallLocation" };
 			lootFolderName_ = "Fallout3";
 			masterFile_ = "Fallout3.esm";
-			mininumHeaderVersion_ = SKYRIM_FO3_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = SKYRIM_FO3_MINIMUM_HEADER_VERSION;
 		} else if (Type() == GameType::fonv) {
 			name_ = "Fallout: New Vegas";
 			registryKeys_ = { "Software\\Bethesda Softworks\\FalloutNV\\Installed Path",
@@ -150,7 +150,7 @@ namespace loot {
 							 "1454587428_is1\\InstallLocation" };
 			lootFolderName_ = "FalloutNV";
 			masterFile_ = "FalloutNV.esm";
-			mininumHeaderVersion_ = FONV_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = FONV_MINIMUM_HEADER_VERSION;
 		} else if (Type() == GameType::fo4) {
 			name_ = "Fallout 4";
 			registryKeys_ = { "Software\\Bethesda Softworks\\Fallout4\\Installed Path",
@@ -158,7 +158,7 @@ namespace loot {
 							 "Steam App 377160\\InstallLocation" };
 			lootFolderName_ = "Fallout4";
 			masterFile_ = "Fallout4.esm";
-			mininumHeaderVersion_ = FO4_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = FO4_MINIMUM_HEADER_VERSION;
 		} else if (Type() == GameType::fo4vr) {
 			name_ = "Fallout 4 VR";
 			registryKeys_ = {
@@ -167,7 +167,7 @@ namespace loot {
 				"611660\\InstallLocation" };
 			lootFolderName_ = "Fallout4VR";
 			masterFile_ = "Fallout4.esm";
-			mininumHeaderVersion_ = FO4_MINIMUM_HEADER_VERSION;
+			minimumHeaderVersion_ = FO4_MINIMUM_HEADER_VERSION;
 		}
 
 		if (!folder.empty()) {
@@ -207,6 +207,8 @@ namespace loot {
 		return gamePath_ / GetPluginsFolderName(type_);
 	}
 
+	bool GameSettings::IsBaseGameInstance() const { return isBaseGameInstance_; }
+
 	GameSettings& GameSettings::SetName(const std::string& name) {
 		name_ = name;
 		return *this;
@@ -219,7 +221,7 @@ namespace loot {
 
 	GameSettings& GameSettings::SetMinimumHeaderVersion(
 		float mininumHeaderVersion) {
-		mininumHeaderVersion_ = mininumHeaderVersion;
+		minimumHeaderVersion_ = mininumHeaderVersion;
 		return *this;
 	}
 
@@ -260,26 +262,8 @@ namespace loot {
 		return *this;
 	}
 
-	void GameSettings::MigrateSettings() {
-		// If the masterlist repository is set to an official repository and the
-		// masterlist branch is an old default branch, update the masterlist
-		// branch to the current default.
-		if (boost::starts_with(repositoryURL_, "https://github.com/loot/") &&
-			IsRepoBranchOldDefault()) {
-			SetRepoBranch(currentDefaultBranch);
-		}
-
-		// If the game is Skyrim VR or Fallout 4 VR and the masterlist repository
-		// is the official Skyrim SE or Fallout 4 repository (respectively),
-		// switch to the newer VR-specific repositories.
-		if (Type() == GameType::tes5vr &&
-			RepoURL() == GameSettings(GameType::tes5se).RepoURL()) {
-			SetRepoURL(GameSettings(GameType::tes5vr).RepoURL());
-		}
-
-		if (Type() == GameType::fo4vr &&
-			RepoURL() == GameSettings(GameType::fo4).RepoURL()) {
-			SetRepoURL(GameSettings(GameType::fo4vr).RepoURL());
-		}
+	GameSettings& GameSettings::SetIsBaseGameInstance(bool isInstance) {
+		isBaseGameInstance_ = isInstance;
+		return *this;
 	}
 }

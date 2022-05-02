@@ -34,8 +34,17 @@ private:
   void progress(Progress p);
   void log(loot::LogLevel level, const std::string& message) const;
 
+  DWORD GetFile(const WCHAR* szUrl, const CHAR* szFileName);
   void getSettings(const std::filesystem::path& file);
+  std::string getOldDefaultRepoUrl(loot::GameType gameType);
+  bool isLocalPath(const std::string& location, const std::string& filename);
+  bool isBranchCheckedOut(const std::filesystem::path& localGitRepo,
+      const std::string& branch);
+  std::optional<std::string> migrateMasterlistRepoSettings(loot::GameType gameType, std::string url, std::string branch);
+  std::optional<std::string> migrateMasterlistRepoSettings(loot::GameType gameType, cpptoml::option<std::string> url, cpptoml::option<std::string> branch);
+  std::string migrateMasterlistSource(const std::string& source);
 
+  std::filesystem::path gamePath() const;
   std::filesystem::path masterlistPath() const;
   std::filesystem::path settingsPath() const;
   std::filesystem::path userlistPath() const;
