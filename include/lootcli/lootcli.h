@@ -15,41 +15,40 @@ enum class LogLevels
   Error
 };
 
-
 inline LogLevels logLevelFromString(const std::string& s)
 {
   if (s == "trace") {
     return LogLevels::Trace;
   } else if (s == "debug") {
     return LogLevels::Debug;
-  }
-  else if (s == "info") {
+  } else if (s == "info") {
     return LogLevels::Info;
-  }
-  else if (s == "warning") {
+  } else if (s == "warning") {
     return LogLevels::Warning;
-  }
-  else if (s == "error") {
+  } else if (s == "error") {
     return LogLevels::Error;
-  }
-  else {
+  } else {
     return LogLevels::Info;
   }
 }
 
 inline std::string logLevelToString(LogLevels level)
 {
-  switch (level)
-  {
-    case LogLevels::Trace:   return "trace";
-    case LogLevels::Debug:   return "debug";
-    case LogLevels::Info:    return "info";
-    case LogLevels::Warning: return "warning";
-    case LogLevels::Error:   return "error";
-    default:                 return "info";
+  switch (level) {
+  case LogLevels::Trace:
+    return "trace";
+  case LogLevels::Debug:
+    return "debug";
+  case LogLevels::Info:
+    return "info";
+  case LogLevels::Warning:
+    return "warning";
+  case LogLevels::Error:
+    return "error";
+  default:
+    return "info";
   }
 }
-
 
 enum class Progress
 {
@@ -73,8 +72,8 @@ enum class MessageType
 
 struct Message
 {
-  MessageType type = MessageType::None;
-  Progress progress = Progress::None;
+  MessageType type   = MessageType::None;
+  Progress progress  = Progress::None;
   LogLevels logLevel = LogLevels::Info;
   std::string log;
 
@@ -88,7 +87,6 @@ struct Message
     return {MessageType::Log, Progress::None, level, std::move(log)};
   }
 };
-
 
 inline Message parseMessage(const std::string_view& line)
 {
@@ -113,6 +111,6 @@ inline Message parseMessage(const std::string_view& line)
   }
 }
 
-} // namespace
+}  // namespace lootcli
 
-#endif // MODORGANIZER_LOOTCLI_INCLUDED
+#endif  // MODORGANIZER_LOOTCLI_INCLUDED
