@@ -9,175 +9,228 @@ namespace loot {
 	static constexpr float FONV_MINIMUM_HEADER_VERSION = 1.32f;
 	static constexpr float FO4_MINIMUM_HEADER_VERSION = 0.95f;
 
-	std::string GetPluginsFolderName(GameType gameType) {
-		switch (gameType) {
-		case GameType::tes3:
-			return "Data Files";
-		case GameType::tes4:
-		case GameType::tes5:
-		case GameType::tes5se:
-		case GameType::tes5vr:
-		case GameType::fo3:
-		case GameType::fonv:
-		case GameType::fo4:
-		case GameType::fo4vr:
-			return "Data";
+	GameType GetGameType(const GameId gameId) {
+		switch (gameId) {
+		case GameId::tes3:
+			return GameType::tes3;
+		case GameId::tes4:
+		case GameId::nehrim:
+			return GameType::tes4;
+		case GameId::tes5:
+		case GameId::enderal:
+			return GameType::tes5;
+		case GameId::tes5se:
+		case GameId::enderalse:
+			return GameType::tes5se;
+		case GameId::tes5vr:
+			return GameType::tes5vr;
+		case GameId::fo3:
+			return GameType::fo3;
+		case GameId::fonv:
+			return GameType::fonv;
+		case GameId::fo4:
+			return GameType::fo4;
+		case GameId::fo4vr:
+			return GameType::fo4vr;
 		default:
-			throw std::logic_error("Unrecognised game type");
+			throw std::logic_error("Unrecognised game ID");
 		}
 	}
 
-	std::string GetDefaultMasterlistRepositoryName(GameType gameType) {
-		switch (gameType) {
-		case GameType::tes3:
+	float GetMinimumHeaderVersion(const GameId gameId) {
+		switch (gameId) {
+		case GameId::tes3:
+			return MORROWIND_MINIMUM_HEADER_VERSION;
+		case GameId::tes4:
+		case GameId::nehrim:
+			return OBLIVION_MINIMUM_HEADER_VERSION;
+		case GameId::tes5:
+		case GameId::enderal:
+			return SKYRIM_FO3_MINIMUM_HEADER_VERSION;
+		case GameId::tes5se:
+		case GameId::tes5vr:
+		case GameId::enderalse:
+			return SKYRIM_SE_MINIMUM_HEADER_VERSION;
+		case GameId::fo3:
+			return SKYRIM_FO3_MINIMUM_HEADER_VERSION;
+		case GameId::fonv:
+			return FONV_MINIMUM_HEADER_VERSION;
+		case GameId::fo4:
+		case GameId::fo4vr:
+			return FO4_MINIMUM_HEADER_VERSION;
+		default:
+			throw std::logic_error("Unrecognised game ID");
+		}
+	}
+
+	std::string GetPluginsFolderName(GameId gameId) {
+		switch (gameId) {
+		case GameId::tes3:
+			return "Data Files";
+		case GameId::tes4:
+		case GameId::nehrim:
+		case GameId::tes5:
+		case GameId::enderal:
+		case GameId::tes5se:
+		case GameId::enderalse:
+		case GameId::tes5vr:
+		case GameId::fo3:
+		case GameId::fonv:
+		case GameId::fo4:
+		case GameId::fo4vr:
+			return "Data";
+		default:
+			throw std::logic_error("Unrecognised game ID");
+		}
+	}
+
+	std::string ToString(const GameId gameId) {
+		switch (gameId) {
+		case GameId::tes3:
+			return "Morrowind";
+		case GameId::tes4:
+			return "Oblivion";
+		case GameId::nehrim:
+			return "Nehrim";
+		case GameId::tes5:
+			return "Skyrim";
+		case GameId::enderal:
+			return "Enderal";
+		case GameId::tes5se:
+			return "Skyrim Special Edition";
+		case GameId::enderalse:
+			return "Enderal Special Edition";
+		case GameId::tes5vr:
+			return "Skyrim VR";
+		case GameId::fo3:
+			return "Fallout3";
+		case GameId::fonv:
+			return "FalloutNV";
+		case GameId::fo4:
+			return "Fallout4";
+		case GameId::fo4vr:
+			return "Fallout4VR";
+		default:
+			throw std::logic_error("Unrecognised game ID");
+		}
+	}
+
+	bool SupportsLightPlugins(const GameType gameType) {
+		return gameType == GameType::tes5se || gameType == GameType::tes5vr ||
+			gameType == GameType::fo4 || gameType == GameType::fo4vr;
+	}
+
+	std::string GetMasterFilename(const GameId gameId) {
+		switch (gameId) {
+		case GameId::tes3:
+			return "Morrowind.esm";
+		case GameId::tes4:
+			return "Oblivion.esm";
+		case GameId::nehrim:
+			return "Nehrim.esm";
+		case GameId::tes5:
+		case GameId::tes5se:
+		case GameId::tes5vr:
+		case GameId::enderal:
+		case GameId::enderalse:
+			return "Skyrim.esm";
+		case GameId::fo3:
+			return "Fallout3.esm";
+		case GameId::fonv:
+			return "FalloutNV.esm";
+		case GameId::fo4:
+		case GameId::fo4vr:
+			return "Fallout4.esm";
+		default:
+			throw std::logic_error("Unrecognised game ID");
+		}
+	}
+
+	std::string GetGameName(const GameId gameId) {
+		switch (gameId) {
+		case GameId::tes3:
+			return "TES III: Morrowind";
+		case GameId::tes4:
+			return "TES IV: Oblivion";
+		case GameId::nehrim:
+			return "Nehrim - At Fate's Edge";
+		case GameId::tes5:
+			return "TES V: Skyrim";
+		case GameId::enderal:
+			return "Enderal: Forgotten Stories";
+		case GameId::tes5se:
+			return "TES V: Skyrim Special Edition";
+		case GameId::enderalse:
+			return "Enderal: Forgotten Stories (Special Edition)";
+		case GameId::tes5vr:
+			return "TES V: Skyrim VR";
+		case GameId::fo3:
+			return "Fallout 3";
+		case GameId::fonv:
+			return "Fallout: New Vegas";
+		case GameId::fo4:
+			return "Fallout 4";
+		case GameId::fo4vr:
+			return "Fallout 4 VR";
+		default:
+			throw std::logic_error("Unrecognised game ID");
+		}
+	}
+
+	std::string GetDefaultMasterlistRepositoryName(const GameId gameId) {
+		switch (gameId) {
+		case GameId::tes3:
 			return "morrowind";
-		case GameType::tes4:
+		case GameId::tes4:
+		case GameId::nehrim:
 			return "oblivion";
-		case GameType::tes5:
+		case GameId::tes5:
 			return "skyrim";
-		case GameType::tes5se:
+		case GameId::enderal:
+		case GameId::enderalse:
+			return "enderal";
+		case GameId::tes5se:
 			return "skyrimse";
-		case GameType::tes5vr:
+		case GameId::tes5vr:
 			return "skyrimvr";
-		case GameType::fo3:
+		case GameId::fo3:
 			return "fallout3";
-		case GameType::fonv:
+		case GameId::fonv:
 			return "falloutnv";
-		case GameType::fo4:
+		case GameId::fo4:
 			return "fallout4";
-		case GameType::fo4vr:
+		case GameId::fo4vr:
 			return "fallout4vr";
 		default:
 			throw std::logic_error("Unrecognised game type");
 		}
 	}
 
-	std::string GetDefaultMasterlistUrl(std::string repoName) {
-		return std::string("https://raw.githubusercontent.com/loot/") + repoName +
-			"/" + DEFAULT_MASTERLIST_BRANCH + "/masterlist.yaml";
+	std::string GetDefaultMasterlistUrl(const std::string& repositoryName) {
+		return std::string("https://raw.githubusercontent.com/loot/") +
+			repositoryName + "/" + DEFAULT_MASTERLIST_BRANCH + "/masterlist.yaml";
 	}
 
-	std::string GetDefaultMasterlistUrl(GameType gameType) {
-		const auto repoName = GetDefaultMasterlistRepositoryName(gameType);
+	std::string GetDefaultMasterlistUrl(const GameId gameId) {
+		const auto repoName = GetDefaultMasterlistRepositoryName(gameId);
+
 		return GetDefaultMasterlistUrl(repoName);
 	}
 
-	GameSettings::GameSettings(const GameType gameCode, const std::string& folder) :
-		type_(gameCode), masterlistSource_(GetDefaultMasterlistUrl(gameCode)) {
-		if (Type() == GameType::tes3) {
-			name_ = "TES III: Morrowind";
-			registryKeys_ = { "Software\\Bethesda Softworks\\Morrowind\\Installed Path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 22320\\InstallLocation",
-							 "Software\\GOG.com\\Games\\1440163901\\path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "1440163901_is1\\InstallLocation",
-							 "Software\\GOG.com\\Games\\1435828767\\path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "1435828767_is1\\InstallLocation" };
-			lootFolderName_ = "Morrowind";
-			masterFile_ = "Morrowind.esm";
-			minimumHeaderVersion_ = MORROWIND_MINIMUM_HEADER_VERSION;
-		} else if (Type() == GameType::tes4) {
-			name_ = "TES IV: Oblivion";
-			registryKeys_ = { "Software\\Bethesda Softworks\\Oblivion\\Installed Path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 22330\\InstallLocation",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 900883\\InstallLocation",
-							 "Software\\GOG.com\\Games\\1242989820\\path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "1242989820_is1\\InstallLocation",
-							 "Software\\GOG.com\\Games\\1458058109\\path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "1458058109_is1\\InstallLocation" };
-			lootFolderName_ = "Oblivion";
-			masterFile_ = "Oblivion.esm";
-			minimumHeaderVersion_ = OBLIVION_MINIMUM_HEADER_VERSION;
-		} else if (Type() == GameType::tes5) {
-			name_ = "TES V: Skyrim";
-			registryKeys_ = { "Software\\Bethesda Softworks\\Skyrim\\Installed Path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 72850\\InstallLocation" };
-			lootFolderName_ = "Skyrim";
-			masterFile_ = "Skyrim.esm";
-			minimumHeaderVersion_ = SKYRIM_FO3_MINIMUM_HEADER_VERSION;
-		} else if (Type() == GameType::tes5se) {
-			name_ = "TES V: Skyrim Special Edition";
-			registryKeys_ = {
-				"Software\\Bethesda Softworks\\Skyrim Special Edition\\Installed Path",
-				"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App "
-				"489830\\InstallLocation" };
-			lootFolderName_ = "Skyrim Special Edition";
-			masterFile_ = "Skyrim.esm";
-			minimumHeaderVersion_ = SKYRIM_SE_MINIMUM_HEADER_VERSION;
-		} else if (Type() == GameType::tes5vr) {
-			name_ = "TES V: Skyrim VR";
-			registryKeys_ = { "Software\\Bethesda Softworks\\Skyrim VR\\Installed Path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 611670\\InstallLocation" };
-			lootFolderName_ = "Skyrim VR";
-			masterFile_ = "Skyrim.esm";
-			minimumHeaderVersion_ = SKYRIM_SE_MINIMUM_HEADER_VERSION;
-		} else if (Type() == GameType::fo3) {
-			name_ = "Fallout 3";
-			registryKeys_ = { "Software\\Bethesda Softworks\\Fallout3\\Installed Path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 22300\\InstallLocation",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 22370\\InstallLocation",
-							 "Software\\GOG.com\\Games\\1454315831\\path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "1454315831_is1\\InstallLocation",
-							 "Software\\GOG.com\\Games\\1248282609\\path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "1248282609_is1\\InstallLocation" };
-			lootFolderName_ = "Fallout3";
-			masterFile_ = "Fallout3.esm";
-			minimumHeaderVersion_ = SKYRIM_FO3_MINIMUM_HEADER_VERSION;
-		} else if (Type() == GameType::fonv) {
-			name_ = "Fallout: New Vegas";
-			registryKeys_ = { "Software\\Bethesda Softworks\\FalloutNV\\Installed Path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 22380\\InstallLocation",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 22490\\InstallLocation",
-							 "Software\\GOG.com\\Games\\1312824873\\path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "1312824873_is1\\InstallLocation",
-							 "Software\\GOG.com\\Games\\1454587428\\path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "1454587428_is1\\InstallLocation" };
-			lootFolderName_ = "FalloutNV";
-			masterFile_ = "FalloutNV.esm";
-			minimumHeaderVersion_ = FONV_MINIMUM_HEADER_VERSION;
-		} else if (Type() == GameType::fo4) {
-			name_ = "Fallout 4";
-			registryKeys_ = { "Software\\Bethesda Softworks\\Fallout4\\Installed Path",
-							 "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
-							 "Steam App 377160\\InstallLocation" };
-			lootFolderName_ = "Fallout4";
-			masterFile_ = "Fallout4.esm";
-			minimumHeaderVersion_ = FO4_MINIMUM_HEADER_VERSION;
-		} else if (Type() == GameType::fo4vr) {
-			name_ = "Fallout 4 VR";
-			registryKeys_ = {
-				"Software\\Bethesda Softworks\\Fallout 4 VR\\Installed Path",
-				"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Steam App "
-				"611660\\InstallLocation" };
-			lootFolderName_ = "Fallout4VR";
-			masterFile_ = "Fallout4.esm";
-			minimumHeaderVersion_ = FO4_MINIMUM_HEADER_VERSION;
-		}
-
-		if (!folder.empty()) {
-			lootFolderName_ = folder;
-		}
-	}
+	GameSettings::GameSettings(const GameId gameId, const std::string& lootFolder) :
+		id_(gameId),
+		type_(GetGameType(gameId)),
+		name_(GetGameName(gameId)),
+		masterFile_(GetMasterFilename(gameId)),
+		minimumHeaderVersion_(GetMinimumHeaderVersion(gameId)),
+		lootFolderName_(lootFolder),
+		masterlistSource_(GetDefaultMasterlistUrl(gameId)) {}
 
 	bool GameSettings::operator==(const GameSettings& rhs) const {
 		return name_ == rhs.Name() || lootFolderName_ == rhs.FolderName();
 	}
+
+	GameId GameSettings::Id() const { return id_; }
 
 	GameType GameSettings::Type() const { return type_; }
 
@@ -191,10 +244,6 @@ namespace loot {
 		return minimumHeaderVersion_;
 	}
 
-	std::vector<std::string> GameSettings::RegistryKeys() const {
-		return registryKeys_;
-	}
-
 	std::string GameSettings::MasterlistSource() const { return masterlistSource_; }
 
 	std::filesystem::path GameSettings::GamePath() const { return gamePath_; }
@@ -204,10 +253,8 @@ namespace loot {
 	}
 
 	std::filesystem::path GameSettings::DataPath() const {
-		return gamePath_ / GetPluginsFolderName(type_);
+		return gamePath_ / GetPluginsFolderName(id_);
 	}
-
-	bool GameSettings::IsBaseGameInstance() const { return isBaseGameInstance_; }
 
 	GameSettings& GameSettings::SetName(const std::string& name) {
 		name_ = name;
@@ -222,12 +269,6 @@ namespace loot {
 	GameSettings& GameSettings::SetMinimumHeaderVersion(
 		float mininumHeaderVersion) {
 		minimumHeaderVersion_ = mininumHeaderVersion;
-		return *this;
-	}
-
-	GameSettings& GameSettings::SetRegistryKeys(
-		const std::vector<std::string>& registry) {
-		registryKeys_ = registry;
 		return *this;
 	}
 
@@ -259,11 +300,6 @@ namespace loot {
 			appData = fs::path("");
 		}
 		gameLocalPath_ = appData / fs::path(folderName);
-		return *this;
-	}
-
-	GameSettings& GameSettings::SetIsBaseGameInstance(bool isInstance) {
-		isBaseGameInstance_ = isInstance;
 		return *this;
 	}
 }

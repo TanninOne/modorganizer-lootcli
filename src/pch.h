@@ -65,7 +65,7 @@
 #include <loot/enum/game_type.h>
 
 // third-party
-#include <cpptoml.h>
+#include <toml++/toml.h>
 
 // windows
 #define WIN32_LEAN_AND_MEAN
