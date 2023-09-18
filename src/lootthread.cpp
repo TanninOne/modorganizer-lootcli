@@ -677,10 +677,17 @@ int LOOTWorker::run()
     fs::path profile(m_PluginListPath);
     profile = profile.parent_path();
 
-    m_GameSettings = loot::GameSettings(m_GameId, m_GamePath);
+    m_GameSettings = loot::GameSettings(m_GameId, loot::ToString(m_GameId));
 
-    std::unique_ptr<loot::GameInterface> gameHandle =
-        CreateGameHandle(m_GameSettings.Type(), m_GamePath, profile.string());
+    fs::path settings = settingsPath();
+
+    if (fs::exists(settings))
+      getSettings(settings);
+
+    m_GameSettings.SetGamePath(m_GamePath);
+
+    std::unique_ptr<loot::GameInterface> gameHandle = CreateGameHandle(
+        m_GameSettings.Type(), m_GameSettings.GamePath(), profile.string());
 
     if (!GetLOOTAppData().empty()) {
       // Make sure that the LOOT game path exists.
@@ -719,13 +726,6 @@ int LOOTWorker::run()
         fs::create_directories(lootGamePath);
       }
     }
-
-    fs::path settings = settingsPath();
-
-    if (fs::exists(settings))
-      getSettings(settings);
-
-    m_GameSettings.SetGamePath(m_GamePath);
 
     if (m_Language != loot::MessageContent::DEFAULT_LANGUAGE) {
       log(loot::LogLevel::debug, "initialising language settings");
