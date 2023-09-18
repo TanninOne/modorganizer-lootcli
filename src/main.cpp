@@ -3,48 +3,43 @@
 
 using namespace std;
 
-
 template <typename T>
 T getParameter(const std::vector<std::string>& arguments, const std::string& key)
 {
-    auto iter = std::find(arguments.begin(), arguments.end(), std::string("--") + key);
-    if ((iter != arguments.end())
-        && ((iter + 1) != arguments.end())) {
-        return boost::lexical_cast<T>(*(iter + 1));
-    }
-    else {
-        throw std::runtime_error(std::string("argument missing " + key));
-    }
+  auto iter = std::find(arguments.begin(), arguments.end(), std::string("--") + key);
+  if ((iter != arguments.end()) && ((iter + 1) != arguments.end())) {
+    return boost::lexical_cast<T>(*(iter + 1));
+  } else {
+    throw std::runtime_error(std::string("argument missing " + key));
+  }
 }
 
 template <>
-bool getParameter<bool>(const std::vector<std::string>& arguments, const std::string& key)
+bool getParameter<bool>(const std::vector<std::string>& arguments,
+                        const std::string& key)
 {
-    auto iter = std::find(arguments.begin(), arguments.end(), std::string("--") + key);
-    if (iter != arguments.end()) {
-        return true;
-    }
-    else {
-        return false;
-    }
+  auto iter = std::find(arguments.begin(), arguments.end(), std::string("--") + key);
+  if (iter != arguments.end()) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 template <typename T>
-T getOptionalParameter(const std::vector<std::string> &arguments, const std::string &key, T def)
+T getOptionalParameter(const std::vector<std::string>& arguments,
+                       const std::string& key, T def)
 {
-  try
-  {
+  try {
     return getParameter<T>(arguments, key);
-  }
-  catch(std::runtime_error&)
-  {
+  } catch (std::runtime_error&) {
     return def;
   }
 }
 
 loot::LogLevel getLogLevel(const std::vector<std::string>& arguments)
 {
-  const auto s = getOptionalParameter<std::string>(arguments, "logLevel", "");
+  const auto s     = getOptionalParameter<std::string>(arguments, "logLevel", "");
   const auto level = lootcli::logLevelFromString(s);
 
   return lootcli::toLootLogLevel(level);
@@ -57,23 +52,21 @@ int wWinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
 
   std::vector<std::string> arguments;
   int argc;
-  LPWSTR *argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+  LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 
-    if (argv)
-    {
-        for (int i = 0; i < argc; ++i)
-        {
-            size_t num_converted;
-            std::vector<char> arg(wcslen(argv[i]) * sizeof(wchar_t) + 1);
+  if (argv) {
+    for (int i = 0; i < argc; ++i) {
+      size_t num_converted;
+      std::vector<char> arg(wcslen(argv[i]) * sizeof(wchar_t) + 1);
 
-            wcstombs_s(&num_converted, &(arg[0]), arg.size(), argv[i], arg.size() - 1);
+      wcstombs_s(&num_converted, &(arg[0]), arg.size(), argv[i], arg.size() - 1);
 
-            arguments.push_back(&(arg[0]));
-        }
+      arguments.push_back(&(arg[0]));
     }
+  }
 
-    // design rationale: this was designed to have the actual loot stuff run in a separate thread. That turned
-    // out to be unnecessary atm.
+  // design rationale: this was designed to have the actual loot stuff run in a separate
+  // thread. That turned out to be unnecessary atm.
 
   try {
     lootcli::LOOTWorker worker;
@@ -91,7 +84,7 @@ int wWinMain(HINSTANCE, HINSTANCE, LPTSTR, int)
     }
 
     return worker.run();
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what();
     return 1;
   }
