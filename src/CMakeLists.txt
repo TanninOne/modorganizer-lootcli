@@ -5,7 +5,7 @@ add_executable(lootcli WIN32)
 mo2_configure_executable(lootcli
 	WARNINGS OFF
 	TRANSLATIONS OFF
-	PRIVATE_DEPENDS boost Qt::Core loot cpptoml)
+	PRIVATE_DEPENDS boost Qt::Core loot tomlplusplus)
 target_include_directories(lootcli
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
