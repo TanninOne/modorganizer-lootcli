@@ -59,17 +59,14 @@ void LOOTWorker::setGame(const std::string& gameName)
       {"fallout3", loot::GameId::fo3},     {"fallout4", loot::GameId::fo4},
       {"fallout4vr", loot::GameId::fo4vr}, {"falloutnv", loot::GameId::fonv},
       {"skyrim", loot::GameId::tes5},      {"skyrimse", loot::GameId::tes5se},
-      {"skyrimvr", loot::GameId::tes5vr},
-  };
+      {"skyrimvr", loot::GameId::tes5vr},  {"nehrim", loot::GameId::nehrim},
+      {"enderal", loot::GameId::enderal},  {"enderalse", loot::GameId::enderalse}};
 
   auto iter = gameMap.find(ToLower(gameName));
 
   if (iter != gameMap.end()) {
-    m_GameName = gameName;
-    if (ToLower(gameName) == "skyrimse") {
-      m_GameName = "Skyrim Special Edition";
-    }
-    m_GameId = iter->second;
+    m_GameId   = iter->second;
+    m_GameName = loot::ToString(m_GameId);
   } else {
     throw std::runtime_error("invalid game name \"" + gameName + "\"");
   }
